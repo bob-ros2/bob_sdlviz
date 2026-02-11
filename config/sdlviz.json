@@ -1,0 +1,41 @@
+[
+  {
+    "topic": "/bob/text_speaking",
+    "area": [
+      0,
+      408,
+      854,
+      72
+    ],
+    "line_limit": 3,
+    "wrap_width": 100,
+    "align": "center",
+    "append_newline": true,
+    "text_color": [
+      180,
+      180,
+      180,
+      255
+    ],
+    "bg_color": [
+      40,
+      40,
+      40,
+      255
+    ]
+  },
+  {
+    "type": "MarkerLayer",
+    "topic": "/bob/marker_array",
+    "area": [
+      0,
+      0,
+      854,
+      408
+    ],
+    "scale": 1200.0,
+    "offset_x": 50.0,
+    "offset_y": -120.0,
+    "exclude_ns": "face_0_0,face_0_1"
+  }
+]

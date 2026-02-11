@@ -1,0 +1,51 @@
+# ROS 2 build artifacts
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.byte
+
+# C++
+*.o
+*.obj
+*.so
+*.a
+*.lib
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Local configuration (CRITICAL: includes TWITCH_STREAM_KEY)
+.env
+
+# Colcon / Build metadata
+colcon_*.xml
+**/ament_index/
+**/share/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,0 +1,32 @@
+# Example parameter configuration file for the ROS sdlviz node.
+#
+# To use this file with ros2 run:
+#   ros2 run bob_sdlviz sdlviz --ros-args --params-file /path/to/this/file/sdlviz.yaml
+#
+# To use with a launch file, add the following to your launch description:
+#   parameters=[os.path.join(get_package_share_directory('bob_sdlviz'), 'config', 'sdlviz.yaml')] 
+
+/**/sdlviz:
+  ros__parameters:
+    # --- Marker Rendering Parameters ---
+    scale: 1200.0          # Scaling factor applied to incoming marker coordinates.
+    offset_x: -50.0        # Horizontal pixel offset applied to all markers.
+    offset_y: -110.0       # Vertical pixel offset applied to all markers.
+    excluded_namespaces: ["face_0_0", "face_0_1"] # List of marker namespaces to hide.
+
+    # --- Video and Window Parameters ---
+    # screen_width: 854     # Width of the output window and stream.
+    # screen_height: 480    # Height of the output window and stream.
+    # fps: 60.0             # Target framerate for the render loop and ffmpeg stream.
+    # show_window: true     # Set to 'true' to display the visualization in a local window.
+
+    # --- Streaming Parameters ---
+    # stream_output: false   # Set to 'true' to enable writing raw frames to the named pipe.
+    # stream_path: "/tmp/video_pipe" # Filesystem path for the named pipe (FIFO).
+
+    # --- Text Terminal Parameters ---
+    font_path: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf" # Path to the .ttf font file.
+    font_size: 16         # Font size for rendering text in dynamic terminals.
+
+    # config_file_path: ./config/sdlviz.json
+  
