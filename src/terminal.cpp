@@ -12,9 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+ * @file terminal.cpp
+ * @brief Implementation of the yTerminal class for SDL text rendering.
+ */
+
 #include "bob_sdlviz/terminal.hpp"
 #include <sstream>
 
+/**
+ * @brief Construct a new yTerminal object.
+ *
+ * Initializes the terminal with font, layout, and styling parameters.
+ */
 yTerminal::yTerminal(
   TTF_Font * font, size_t line_limit, size_t wrap_width,
   SDL_Rect area, SDL_Color text_color, SDL_Color bg_color,
@@ -24,6 +34,11 @@ yTerminal::yTerminal(
   area_(area), text_color_(text_color), bg_color_(bg_color), align_(align),
   clear_on_new_(clear_on_new), append_newline_(append_newline) {}
 
+/**
+ * @brief Appends text to the terminal history.
+ *
+ * Handles line splitting, character wrapping, and FIFO behavior (line limiting).
+ */
 void yTerminal::append(const std::string & text)
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -47,6 +62,10 @@ void yTerminal::append(const std::string & text)
   auto new_lines = split_lines(combined_text);
 
   for (const auto & line : new_lines) {
+    if (line.empty()) {
+      lines_.push_back("");
+      continue;
+    }
     std::stringstream word_stream(line);
     std::string word;
     std::string current_wrapped_line;
@@ -69,6 +88,11 @@ void yTerminal::append(const std::string & text)
   }
 }
 
+/**
+ * @brief Draws the text terminal on the screen.
+ *
+ * Renders the background rectangle followed by each text line with the configured alignment.
+ */
 void yTerminal::draw(SDL_Renderer * renderer)
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -121,6 +145,9 @@ void yTerminal::draw(SDL_Renderer * renderer)
   }
 }
 
+/**
+ * @brief Splits a string into lines based on newline characters.
+ */
 std::vector<std::string> yTerminal::split_lines(const std::string & str)
 {
   std::vector<std::string> result;
@@ -132,6 +159,11 @@ std::vector<std::string> yTerminal::split_lines(const std::string & str)
   return result;
 }
 
+/**
+ * @brief Filters out characters not present in the font to prevent rendering crashes/glitches.
+ *
+ * Uses a basic UTF-8 parser to identify and validate multibyte sequences.
+ */
 std::string yTerminal::filter_unsupported_chars(
   const std::string & input,
   TTF_Font * font)

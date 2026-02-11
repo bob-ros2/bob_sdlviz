@@ -12,8 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+ * @file sdlviz_node.cpp
+ * @brief Entry point for the bob_sdlviz ROS 2 node.
+ */
+
 #include "bob_sdlviz/sdlviz.hpp"
 
+/**
+ * @brief Main function to initialize ROS 2 and start the SdlVizNode.
+ *
+ * Orchestrates a multi-threaded executor to handle ROS callbacks while keeping
+ * the SDL rendering loop in the primary thread.
+ */
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);

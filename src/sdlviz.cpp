@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+ * @file sdlviz.cpp
+ * @brief Implementation of the SdlVizNode class for ROS 2 SDL-based visualization.
+ */
+
 #include "bob_sdlviz/sdlviz.hpp"
 #include <algorithm>
 #include <cctype>
@@ -25,7 +30,10 @@
 
 using namespace std::chrono_literals;
 
-// Helper functions to get environment variables with defaults
+/**
+ * @brief Helper functions to get environment variables with various default types.
+ * @{
+ */
 static std::string get_env(const char * name, const std::string & default_val)
 {
   const char * val = std::getenv(name);
@@ -86,14 +94,19 @@ get_env(const char * name, const std::vector<std::string> & default_val)
   }
   return result;
 }
+/** @} */
 
+/**
+ * @brief Construct a new SdlVizNode object.
+ *
+ * Performs parameter declaration, SDL initialization, and setup of dynamic configuration.
+ */
 SdlVizNode::SdlVizNode()
 : Node("sdlviz")
 {
   signal(SIGPIPE, SIG_IGN);
 
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor();
-
 
   descriptor.description =
     "Target screen/video width in pixels (Default: 854, Env: SDLVIZ_WIDTH).";
@@ -285,6 +298,11 @@ SdlVizNode::SdlVizNode()
     sub_options);
 }
 
+/**
+ * @brief Destroy the SdlVizNode object.
+ *
+ * Safely releases SDL, TTF, and threading resources.
+ */
 SdlVizNode::~SdlVizNode()
 {
   if (renderer_) {
@@ -303,6 +321,11 @@ SdlVizNode::~SdlVizNode()
   SDL_Quit();
 }
 
+/**
+ * @brief Main execution loop for the visualization node.
+ *
+ * Handles SDL events and orchestrates the rendering loop at a fixed framerate.
+ */
 void SdlVizNode::run()
 {
   double fps = this->get_parameter("fps").as_double();
@@ -330,11 +353,17 @@ void SdlVizNode::run()
   }
 }
 
+/**
+ * @brief Callback for dynamic configuration updates.
+ */
 void SdlVizNode::event_callback(const std_msgs::msg::String::SharedPtr msg)
 {
   process_terminal_config(msg->data);
 }
 
+/**
+ * @brief Parses JSON terminal configuration and spawns/updates layers.
+ */
 void SdlVizNode::process_terminal_config(const std::string & json_data)
 {
   using json = nlohmann::json;
@@ -477,6 +506,9 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
   }
 }
 
+/**
+ * @brief Main rendering logic. Clears screen and draws all active layers.
+ */
 void SdlVizNode::render_loop()
 {
   SDL_SetRenderDrawColor(renderer_, 0x1E, 0x1E, 0x1E, 0xFF);

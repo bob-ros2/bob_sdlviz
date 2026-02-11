@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+ * @file types.hpp
+ * @brief Common data structures and FIFO utility classes for bob_sdlviz.
+ *
+ * This file defines the core structures used for dynamic marker layers,
+ * terminals, and video streams, as well as helpers for pipe-based I/O.
+ */
+
 #ifndef BOB_SDLVIZ__TYPES_HPP_
 #define BOB_SDLVIZ__TYPES_HPP_
 
@@ -38,13 +46,24 @@
 // Forward declaration of yTerminal to avoid circular dependency
 class yTerminal;
 
-// A simple helper class for streaming raw frames to a named pipe (FIFO)
+/**
+ * @class FifoStreamer
+ * @brief A simple helper class for streaming raw frames to a named pipe (FIFO).
+ */
 class FifoStreamer
 {
 public:
+  /**
+   * @brief Construct a new FifoStreamer object.
+   * @param path The filesystem path to the named pipe.
+   */
   explicit FifoStreamer(const std::string & path)
   : pipe_path_(path) {}
 
+  /**
+   * @brief Opens the pipe for writing. Creates the FIFO if it doesn't exist.
+   * @return true if successfully opened, false otherwise.
+   */
   bool open_pipe()
   {
     if (access(pipe_path_.c_str(), F_OK) == -1) {
@@ -63,6 +82,11 @@ public:
     return false;
   }
 
+  /**
+   * @brief Writes a frame buffer to the pipe. Automatically opens the pipe on first call.
+   * @param buffer Pointer to the frame data.
+   * @param size Size of the data in bytes.
+   */
   void write_frame(void * buffer, size_t size)
   {
     if (pipe_fd_ == -1) {
@@ -82,6 +106,9 @@ public:
     }
   }
 
+  /**
+   * @brief Destroy the FifoStreamer object and close the pipe.
+   */
   ~FifoStreamer()
   {
     if (pipe_fd_ != -1) {
@@ -94,10 +121,19 @@ private:
   int pipe_fd_ = -1;
 };
 
-// A helper for reading raw frames from a FIFO (e.g. from an MPV instance)
+/**
+ * @class FifoReader
+ * @brief A helper for reading raw frames from a FIFO (e.g. from an MPV or FFmpeg instance).
+ */
 class FifoReader
 {
 public:
+  /**
+   * @brief Construct a new FifoReader object.
+   * @param path Path to the named pipe to read from.
+   * @param w Expected frame width.
+   * @param h Expected frame height.
+   */
   FifoReader(const std::string & path, int w, int h)
   : path_(path), width_(w), height_(h)
   {
@@ -105,6 +141,9 @@ public:
     current_frame_.resize(frame_size_, 0);
   }
 
+  /**
+   * @brief Starts the background reader thread.
+   */
   void start()
   {
     reader_thread_ = std::thread(
@@ -141,6 +180,11 @@ public:
       });
   }
 
+  /**
+   * @brief Fetches the latest frame if available.
+   * @param[out] out_frame Buffer to copy the frame into.
+   * @return true if a new frame was copied, false otherwise.
+   */
   bool get_latest_frame(std::vector<uint8_t> & out_frame)
   {
     std::lock_guard<std::mutex> lock(frame_mutex_);
@@ -152,6 +196,9 @@ public:
     return true;
   }
 
+  /**
+   * @brief Destroy the FifoReader object and stop the reader thread.
+   */
   ~FifoReader()
   {
     stop_flag_ = true;
@@ -171,24 +218,32 @@ private:
   bool new_frame_available_{false};
 };
 
+/**
+ * @struct DynamicTerminal
+ * @brief Represents a dynamically created text terminal area.
+ */
 struct DynamicTerminal
 {
-  std::unique_ptr<yTerminal> terminal;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscriber;
-  rclcpp::Time creation_time;
-  rclcpp::Duration lifetime;
+  std::unique_ptr<yTerminal> terminal;  ///< The terminal rendering logic.
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscriber;  ///< Subscription.
+  rclcpp::Time creation_time;           ///< When the layer was created.
+  rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
   DynamicTerminal()
   : creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 };
 
+/**
+ * @struct DynamicVideoStream
+ * @brief Represents a dynamic video area reading frames from a FIFO.
+ */
 struct DynamicVideoStream
 {
-  std::unique_ptr<FifoReader> reader;
-  SDL_Texture * texture = nullptr;
-  SDL_Rect area;
-  int source_width;
-  int source_height;
+  std::unique_ptr<FifoReader> reader;  ///< The FIFO reader instance.
+  SDL_Texture * texture = nullptr;     ///< SDL texture for rendering.
+  SDL_Rect area;                       ///< Screen area to render into.
+  int source_width;                    ///< Raw frame width.
+  int source_height;                   ///< Raw frame height.
 
   ~DynamicVideoStream()
   {
@@ -198,17 +253,21 @@ struct DynamicVideoStream
   }
 };
 
+/**
+ * @struct DynamicMarkerLayer
+ * @brief Represents a 2D projection layer for MarkerArrays.
+ */
 struct DynamicMarkerLayer
 {
-  SDL_Rect area;
-  double scale;
-  double offset_x;
-  double offset_y;
-  std::vector<std::string> excluded_ns;
+  SDL_Rect area;         ///< Screen area to render markers within.
+  double scale;          ///< Scaling factor for marker coordinates.
+  double offset_x;       ///< Horizontal offset.
+  double offset_y;       ///< Vertical offset.
+  std::vector<std::string> excluded_ns;  ///< Namespaces to ignore in this layer.
   rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr
-    subscriber;
-  visualization_msgs::msg::MarkerArray::SharedPtr last_markers;
-  std::mutex data_mutex;
+    subscriber;          ///< MarkerArray topic subscription.
+  visualization_msgs::msg::MarkerArray::SharedPtr last_markers;  ///< Latest received markers.
+  std::mutex data_mutex;  ///< Mutex for protecting last_markers.
 };
 
 #endif  // BOB_SDLVIZ__TYPES_HPP_
