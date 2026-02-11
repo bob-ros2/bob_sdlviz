@@ -94,21 +94,6 @@ SdlVizNode::SdlVizNode()
 
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor();
 
-  descriptor.description =
-    "Uniform scale factor for all markers (Default: 1200.0, Env: SDLVIZ_SCALE).";
-  this->declare_parameter("scale", get_env("SDLVIZ_SCALE", 1200.0), descriptor);
-
-  descriptor.description =
-    "Horizontal pixel offset for markers (Default: -50.0, Env: SDLVIZ_OFFSET_X).";
-  this->declare_parameter(
-    "offset_x", get_env("SDLVIZ_OFFSET_X", -50.0),
-    descriptor);
-
-  descriptor.description =
-    "Vertical pixel offset for markers (Default: -110.0, Env: SDLVIZ_OFFSET_Y).";
-  this->declare_parameter(
-    "offset_y", get_env("SDLVIZ_OFFSET_Y", -110.0),
-    descriptor);
 
   descriptor.description =
     "Target screen/video width in pixels (Default: 854, Env: SDLVIZ_WIDTH).";
@@ -174,12 +159,6 @@ SdlVizNode::SdlVizNode()
     "(Default: 30.0, Env: SDLVIZ_FPS).";
   this->declare_parameter("fps", get_env("SDLVIZ_FPS", 30.0), descriptor);
 
-  descriptor.description =
-    "List of marker namespaces to exclude from rendering "
-    "(Default: [], Env: SDLVIZ_EXCLUDE_NS).";
-  this->declare_parameter(
-    "excluded_namespaces",
-    get_env("SDLVIZ_EXCLUDE_NS", std::vector<std::string>{}), descriptor);
 
   reentrant_group_ =
     this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);

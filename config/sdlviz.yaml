@@ -8,12 +8,6 @@
 
 /**/sdlviz:
   ros__parameters:
-    # --- Marker Rendering Parameters ---
-    scale: 1200.0          # Scaling factor applied to incoming marker coordinates.
-    offset_x: -50.0        # Horizontal pixel offset applied to all markers.
-    offset_y: -110.0       # Vertical pixel offset applied to all markers.
-    excluded_namespaces: ["face_0_0", "face_0_1"] # List of marker namespaces to hide.
-
     # --- Video and Window Parameters ---
     # screen_width: 854     # Width of the output window and stream.
     # screen_height: 480    # Height of the output window and stream.

@@ -70,9 +70,6 @@ ros2 run bob_sdlviz sdlviz
 Many parameters can be mapped from environment variables for easier Docker integration:
 | Env Variable | Used for Parameter | Default |
 |--------------|--------------------|---------|
-| `SDLVIZ_SCALE` | `scale` | `1200.0` |
-| `SDLVIZ_OFFSET_X` | `offset_x` | `-50.0` |
-| `SDLVIZ_OFFSET_Y` | `offset_y` | `-110.0` |
 | `SDLVIZ_WIDTH` | `screen_width` | `854` |
 | `SDLVIZ_HEIGHT` | `screen_height` | `480` |
 | `SDLVIZ_SHOW_WINDOW`| `show_window` | `true` |
@@ -90,9 +87,6 @@ Many parameters can be mapped from environment variables for easier Docker integ
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `scale` | `double` | Uniform scale factor for all markers. (Env: `SDLVIZ_SCALE`) |
-| `offset_x` | `double` | Horizontal pixel offset for markers. (Env: `SDLVIZ_OFFSET_X`) |
-| `offset_y` | `double` | Vertical pixel offset for markers. (Env: `SDLVIZ_OFFSET_Y`) |
 | `screen_width` | `int` | Target screen/video width in pixels. (Env: `SDLVIZ_WIDTH`) |
 | `screen_height` | `int` | Target screen/video height in pixels. (Env: `SDLVIZ_HEIGHT`) |
 | `show_window` | `bool` | Whether to show the local SDL window. (Env: `SDLVIZ_SHOW_WINDOW`) |
@@ -102,7 +96,6 @@ Many parameters can be mapped from environment variables for easier Docker integ
 | `font_path` | `string` | Path to the TTF font file. (Env: `SDLVIZ_FONT_PATH`) |
 | `font_size` | `int` | Base font size for terminals. (Env: `SDLVIZ_FONT_SIZE`) |
 | `fps` | `double` | Target rendering and streaming FPS. (Env: `SDLVIZ_FPS`) |
-| `excluded_namespaces`| `string[]`| List of marker namespaces to exclude globally. (Env: `SDLVIZ_EXCLUDE_NS`) |
 
 ### Topics
 
