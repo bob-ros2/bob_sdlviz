@@ -90,7 +90,7 @@ private:
   // SDL and Rendering
   SDL_Window * window_ = nullptr;                         ///< Local window handle.
   SDL_Renderer * renderer_ = nullptr;                     ///< SDL renderer handle.
-  SDL_Surface * surface_ = nullptr;                       ///< Off-screen surface for headless streaming.
+  SDL_Surface * surface_ = nullptr;                       ///< Surface for headless streaming.
   TTF_Font * font_ = nullptr;                             ///< Default TTF font handle.
   int screen_width_ = 854;                                ///< Final output width.
   int screen_height_ = 480;                               ///< Final output height.

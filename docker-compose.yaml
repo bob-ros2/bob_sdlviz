@@ -6,15 +6,17 @@ services:
     user: "1000:1000"
     env_file:
       - .env
+    volumes:
+      - /tmp:/tmp
+      - ./config:/config:ro
     environment:
       - SDLVIZ_SHOW_WINDOW=false
       - SDLVIZ_STREAM_OUTPUT=true
       - SDL_VIDEODRIVER=dummy
-      - SDLVIZ_CONFIG_PATH=/ros2_ws/src/bob_sdlviz/config/sdlviz.json
+      - SDLVIZ_CONFIG_PATH=/config/${SDLVIZ_CONFIG_FILE:-sdlviz.json}
+      - SDLVIZ_PARAMS_PATH=/config/sdlviz.yaml
       - ROS_SETUP_PATH=/ros2_ws/install/setup.bash
       - HOME=/tmp
     restart: unless-stopped
     network_mode: "host"
     ipc: host
-    volumes:
-      - /tmp:/tmp

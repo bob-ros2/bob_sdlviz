@@ -36,6 +36,7 @@ export SDLVIZ_FPS="${SDLVIZ_FPS:-30}"
 export SDLVIZ_SHOW_WINDOW="${SDLVIZ_SHOW_WINDOW:-true}"
 export SDLVIZ_STREAM_OUTPUT="${SDLVIZ_STREAM_OUTPUT:-true}"
 export SDLVIZ_CONFIG_PATH="${SDLVIZ_CONFIG_PATH:-$PROJECT_ROOT/config/sdlviz.json}"
+export SDLVIZ_PARAMS_PATH="${SDLVIZ_PARAMS_PATH:-$PROJECT_ROOT/config/sdlviz.yaml}"
 
 export STREAM_KEY="${TWITCH_STREAM_KEY}"
 export INGEST_SERVER="${INGEST_SERVER:-rtmp://live-fra.twitch.tv/app/}"
@@ -83,7 +84,8 @@ trap cleanup EXIT
 # --- Launch Application ---
 echo "Starting sdlviz node..."
 ros2 run bob_sdlviz sdlviz --ros-args \
-    --params-file "$PROJECT_ROOT/config/sdlviz.yaml" \
+    --params-file "$SDLVIZ_PARAMS_PATH" \
+    -p config_file_path:="$SDLVIZ_CONFIG_PATH" \
     --log-level bob.sdlviz:=info &
 
 NODE_PID=$!
@@ -103,7 +105,8 @@ do
     if ! kill -0 $NODE_PID 2>/dev/null; then
         echo "Error: sdlviz node (PID: $NODE_PID) is not running. Restarting node..."
         ros2 run bob_sdlviz sdlviz --ros-args \
-            --params-file "$PROJECT_ROOT/config/sdlviz.yaml" &
+            --params-file "$SDLVIZ_PARAMS_PATH" \
+            -p config_file_path:="$SDLVIZ_CONFIG_PATH" &
         NODE_PID=$!
         sleep 2
     fi

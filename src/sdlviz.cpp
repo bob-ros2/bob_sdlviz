@@ -241,6 +241,9 @@ SdlVizNode::SdlVizNode()
       }
     }
   } else {
+    RCLCPP_INFO(
+      this->get_logger(), "Creating off-screen surface (%dx%d)...",
+      screen_width_, screen_height_);
     surface_ =
       SDL_CreateRGBSurface(
       0, screen_width_, screen_height_, 32, 0x00ff0000,
@@ -260,6 +263,7 @@ SdlVizNode::SdlVizNode()
         SDL_GetError());
       return;
     }
+    RCLCPP_INFO(this->get_logger(), "Software renderer created successfully.");
   }
 
   if (stream_output_) {
@@ -417,6 +421,10 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
         dt->creation_time = this->now();
         dt->lifetime = rclcpp::Duration::from_seconds(lifetime_sec);
 
+        RCLCPP_INFO(
+          this->get_logger(), "Created dynamic terminal for topic: %s",
+          topic.c_str());
+
         dt->subscriber = this->create_subscription<std_msgs::msg::String>(
           topic, 10,
           [this, topic](const std_msgs::msg::String::SharedPtr sub_msg) {
@@ -474,6 +482,11 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
             }
           }
         }
+
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Created marker layer on topic: %s (Scale: %.2f)",
+          topic.c_str(), ml->scale);
 
         ml->subscriber =
           this->create_subscription<visualization_msgs::msg::MarkerArray>(
