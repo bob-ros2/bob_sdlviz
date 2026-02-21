@@ -677,6 +677,9 @@ void SdlVizNode::render_loop()
       if (dt->lifetime.seconds() > 0 &&
         (dt->creation_time + dt->lifetime) < now)
       {
+        RCLCPP_INFO(
+          this->get_logger(), "Removing expired terminal for topic: %s",
+          topic.c_str());
         expired_terminals.push_back(topic);
       } else {
         dt->terminal->draw(renderer_);
