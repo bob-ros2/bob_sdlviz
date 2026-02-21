@@ -82,6 +82,8 @@ private:
 
   // Threading and Data
   std::mutex data_mutex_;                                 ///< Global data protection.
+  std::vector<std::string> event_queue_;                  ///< Queue for dynamic events.
+  std::mutex event_queue_mutex_;                          ///< Mutex for the event queue.
   std::map<std::string, std::unique_ptr<DynamicMarkerLayer>>
   dynamic_marker_layers_;  ///< Map of active marker layers.
   std::mutex marker_layers_mutex_;                        ///< Protects the marker layers map.

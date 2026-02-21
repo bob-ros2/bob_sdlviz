@@ -1,0 +1,85 @@
+[
+    {
+        "type": "MarkerLayer",
+        "topic": "/bob/marker_array",
+        "area": [
+            0,
+            0,
+            854,
+            480
+        ],
+        "scale": 1200.0,
+        "offset_x": 0.0,
+        "offset_y": -50.0
+    },
+    {
+        "topic": "/bob/matrix_rain",
+        "area": [
+            0,
+            0,
+            854,
+            480
+        ],
+        "line_limit": 20,
+        "wrap_width": 150,
+        "text_color": [
+            0,
+            255,
+            100,
+            50
+        ],
+        "bg_color": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    {
+        "topic": "/bob/llm_stream",
+        "area": [
+            200,
+            100,
+            454,
+            280
+        ],
+        "line_limit": 10,
+        "wrap_width": 50,
+        "align": "center",
+        "text_color": [
+            0,
+            255,
+            255,
+            255
+        ],
+        "bg_color": [
+            0,
+            0,
+            0,
+            180
+        ]
+    },
+    {
+        "topic": "/bob/nexus/decryption",
+        "area": [
+            660,
+            10,
+            180,
+            460
+        ],
+        "line_limit": 25,
+        "wrap_width": 20,
+        "text_color": [
+            0,
+            255,
+            200,
+            150
+        ],
+        "bg_color": [
+            0,
+            20,
+            20,
+            100
+        ]
+    }
+]

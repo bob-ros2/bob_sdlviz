@@ -346,9 +346,11 @@ void SdlVizNode::run()
 void SdlVizNode::event_callback(const std_msgs::msg::String::SharedPtr msg)
 {
   RCLCPP_INFO(
-    this->get_logger(), "Received dynamic event: %s",
+    this->get_logger(), "Received dynamic event (queued): %s",
     msg->data.c_str());
-  process_terminal_config(msg->data);
+
+  std::lock_guard<std::mutex> lock(event_queue_mutex_);
+  event_queue_.push_back(msg->data);
 }
 
 /**
@@ -531,6 +533,21 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
  */
 void SdlVizNode::render_loop()
 {
+  // Process any queued dynamic configuration events on the main thread
+  {
+    std::vector<std::string> local_queue;
+    {
+      std::lock_guard<std::mutex> lock(event_queue_mutex_);
+      if (!event_queue_.empty()) {
+        local_queue.swap(event_queue_);
+      }
+    }
+
+    for (const auto & json_data : local_queue) {
+      process_terminal_config(json_data);
+    }
+  }
+
   SDL_SetRenderDrawColor(renderer_, 0x1E, 0x1E, 0x1E, 0xFF);
   SDL_RenderClear(renderer_);
 
