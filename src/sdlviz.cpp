@@ -79,23 +79,6 @@ static bool get_env(const char * name, bool default_val)
   return s == "true" || s == "1" || s == "yes" || s == "on";
 }
 
-static std::vector<std::string>
-get_env(const char * name, const std::vector<std::string> & default_val)
-{
-  const char * val = std::getenv(name);
-  if (!val) {
-    return default_val;
-  }
-  std::vector<std::string> result;
-  std::stringstream ss(val);
-  std::string item;
-  while (std::getline(ss, item, ',')) {
-    result.push_back(item);
-  }
-  return result;
-}
-/** @} */
-
 /**
  * @brief Construct a new SdlVizNode object.
  *
@@ -362,6 +345,9 @@ void SdlVizNode::run()
  */
 void SdlVizNode::event_callback(const std_msgs::msg::String::SharedPtr msg)
 {
+  RCLCPP_INFO(
+    this->get_logger(), "Received dynamic event: %s",
+    msg->data.c_str());
   process_terminal_config(msg->data);
 }
 
@@ -374,8 +360,15 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
   try {
     auto config_array = json::parse(json_data);
     if (!config_array.is_array()) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Received dynamic config that is not an array. Ignoring.");
       return;
     }
+
+    RCLCPP_INFO(
+      this->get_logger(), "Processing %zu dynamic layers.",
+      config_array.size());
 
     for (const auto & config : config_array) {
       std::string type = config.value("type", "String");
@@ -452,10 +445,17 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           renderer_, SDL_PIXELFORMAT_BGRA32,
           SDL_TEXTUREACCESS_STREAMING,
           vs->source_width, vs->source_height);
+        vs->creation_time = this->now();
+        vs->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+
         vs->reader = std::make_unique<FifoReader>(
           pipe_path, vs->source_width,
           vs->source_height);
         vs->reader->start();
+
+        RCLCPP_INFO(
+          this->get_logger(), "Created video stream layer on pipe: %s",
+          pipe_path.c_str());
 
         std::lock_guard<std::mutex> lock(video_streams_mutex_);
         dynamic_video_streams_[pipe_path] = std::move(vs);
@@ -471,6 +471,8 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
         ml->scale = config.value("scale", 1000.0);
         ml->offset_x = config.value("offset_x", 0.0);
         ml->offset_y = config.value("offset_y", 0.0);
+        ml->creation_time = this->now();
+        ml->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
 
         if (config.contains("exclude_ns")) {
           std::string ns_str = config["exclude_ns"];
@@ -515,7 +517,12 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
         dynamic_marker_layers_[topic] = std::move(ml);
       }
     }
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      this->get_logger(), "Error parsing dynamic config JSON: %s",
+      e.what());
   } catch (...) {
+    RCLCPP_ERROR(this->get_logger(), "Unknown error parsing dynamic config JSON.");
   }
 }
 
@@ -529,7 +536,19 @@ void SdlVizNode::render_loop()
 
   {
     std::lock_guard<std::mutex> lock(video_streams_mutex_);
-    for (auto const &[pipe_path, vs] : dynamic_video_streams_) {
+    auto it = dynamic_video_streams_.begin();
+    while (it != dynamic_video_streams_.end()) {
+      auto & vs = it->second;
+      if (vs->lifetime.nanoseconds() > 0 &&
+        (this->now() - vs->creation_time) > vs->lifetime)
+      {
+        RCLCPP_INFO(
+          this->get_logger(), "Removing expired video stream on pipe: %s",
+          it->first.c_str());
+        it = dynamic_video_streams_.erase(it);
+        continue;
+      }
+
       if (vs->reader->get_latest_frame(video_frame_buffer_)) {
         if (vs->texture) {
           SDL_UpdateTexture(
@@ -540,24 +559,38 @@ void SdlVizNode::render_loop()
       if (vs->texture) {
         SDL_RenderCopy(renderer_, vs->texture, NULL, &vs->area);
       }
+      ++it;
     }
   }
 
   {
     std::lock_guard<std::mutex> lock(marker_layers_mutex_);
-    for (auto const &[topic, ml] : dynamic_marker_layers_) {
+    auto it = dynamic_marker_layers_.begin();
+    while (it != dynamic_marker_layers_.end()) {
+      auto & layer = it->second;
+
+      if (layer->lifetime.nanoseconds() > 0 &&
+        (this->now() - layer->creation_time) > layer->lifetime)
+      {
+        RCLCPP_INFO(
+          this->get_logger(), "Removing expired marker layer on topic: %s",
+          it->first.c_str());
+        it = dynamic_marker_layers_.erase(it);
+        continue;
+      }
+
       visualization_msgs::msg::MarkerArray::SharedPtr markers_to_draw;
       {
-        std::lock_guard<std::mutex> data_lock(ml->data_mutex);
-        markers_to_draw = ml->last_markers;
+        std::lock_guard<std::mutex> data_lock(layer->data_mutex);
+        markers_to_draw = layer->last_markers;
       }
 
       if (markers_to_draw && !markers_to_draw->markers.empty()) {
         for (const auto & marker : markers_to_draw->markers) {
-          if (!ml->excluded_ns.empty() &&
+          if (!layer->excluded_ns.empty() &&
             std::find(
-              ml->excluded_ns.begin(), ml->excluded_ns.end(),
-              marker.ns) != ml->excluded_ns.end())
+              layer->excluded_ns.begin(), layer->excluded_ns.end(),
+              marker.ns) != layer->excluded_ns.end())
           {
             continue;
           }
@@ -576,18 +609,18 @@ void SdlVizNode::render_loop()
                   const auto & p1 = marker.points[i];
                   const auto & p2 = marker.points[i + 1];
 
-                  int x1 = ml->area.x + ml->area.w / 2 +
-                    (marker.pose.position.y + p1.y) * ml->scale +
-                    ml->offset_x;
-                  int y1 = ml->area.y + ml->area.h / 2 -
-                    (marker.pose.position.z + p1.z) * ml->scale +
-                    ml->offset_y;
-                  int x2 = ml->area.x + ml->area.w / 2 +
-                    (marker.pose.position.y + p2.y) * ml->scale +
-                    ml->offset_x;
-                  int y2 = ml->area.y + ml->area.h / 2 -
-                    (marker.pose.position.z + p2.z) * ml->scale +
-                    ml->offset_y;
+                  int x1 = layer->area.x + layer->area.w / 2 +
+                    (marker.pose.position.y + p1.y) * layer->scale +
+                    layer->offset_x;
+                  int y1 = layer->area.y + layer->area.h / 2 -
+                    (marker.pose.position.z + p1.z) * layer->scale +
+                    layer->offset_y;
+                  int x2 = layer->area.x + layer->area.w / 2 +
+                    (marker.pose.position.y + p2.y) * layer->scale +
+                    layer->offset_x;
+                  int y2 = layer->area.y + layer->area.h / 2 -
+                    (marker.pose.position.z + p2.z) * layer->scale +
+                    layer->offset_y;
 
                   SDL_RenderDrawLine(renderer_, x1, y1, x2, y2);
                 }
@@ -595,11 +628,11 @@ void SdlVizNode::render_loop()
 
             case visualization_msgs::msg::Marker::SPHERE:
             case visualization_msgs::msg::Marker::CYLINDER: {
-                int cx = ml->area.x + ml->area.w / 2 +
-                  marker.pose.position.y * ml->scale + ml->offset_x;
-                int cy = ml->area.y + ml->area.h / 2 -
-                  marker.pose.position.z * ml->scale + ml->offset_y;
-                int radius = (marker.scale.y * ml->scale) / 2;
+                int cx = layer->area.x + layer->area.w / 2 +
+                  marker.pose.position.y * layer->scale + layer->offset_x;
+                int cy = layer->area.y + layer->area.h / 2 -
+                  marker.pose.position.z * layer->scale + layer->offset_y;
+                int radius = (marker.scale.y * layer->scale) / 2;
 
                 for (int w = 0; w < radius * 2; w++) {
                   for (int h = 0; h < radius * 2; h++) {
@@ -614,6 +647,7 @@ void SdlVizNode::render_loop()
           }
         }
       }
+      ++it;
     }
   }
 

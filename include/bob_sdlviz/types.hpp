@@ -244,6 +244,11 @@ struct DynamicVideoStream
   SDL_Rect area;                       ///< Screen area to render into.
   int source_width;                    ///< Raw frame width.
   int source_height;                   ///< Raw frame height.
+  rclcpp::Time creation_time;           ///< When the layer was created.
+  rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
+
+  DynamicVideoStream()
+  : creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 
   ~DynamicVideoStream()
   {
@@ -268,6 +273,11 @@ struct DynamicMarkerLayer
     subscriber;          ///< MarkerArray topic subscription.
   visualization_msgs::msg::MarkerArray::SharedPtr last_markers;  ///< Latest received markers.
   std::mutex data_mutex;  ///< Mutex for protecting last_markers.
+  rclcpp::Time creation_time;           ///< When the layer was created.
+  rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
+
+  DynamicMarkerLayer()
+  : creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 };
 
 #endif  // BOB_SDLVIZ__TYPES_HPP_
