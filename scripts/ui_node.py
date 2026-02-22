@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2026 Bob Ros
-import sys
 import os
+import sys
 import time
 import threading
+import signal
 from pathlib import Path
 
 # ROS 2 imports
@@ -16,7 +17,6 @@ try:
     from PySide6.QtWidgets import QApplication
     from PySide6.QtWebEngineCore import QWebEngineSettings
     from PySide6.QtWebEngineWidgets import QWebEngineView
-    from rclpy.executors import SingleThreadedExecutor
     from PySide6.QtCore import QUrl, QTimer, QSize, QPoint
     from PySide6.QtGui import QImage, QPainter
 except ImportError as e:
@@ -93,18 +93,38 @@ class WebRenderer(Node):
         self.view.render(painter, QPoint(0, 0))
         painter.end()
         
-        # Convert to raw bytes. Qt's ARGB32 is exactly what SDL's BGRA expects
-        # (on little-endian systems it's BGRA in memory)
-        bits = image.constBits()
-        os.write(self.fifo_fd, bits.tobytes())
+        # Convert to raw bytes
+        data = image.constBits().tobytes()
+        
+        # Ensure full write to FIFO (prevents corruption in ffplay)
+        try:
+            total_sent = 0
+            while total_sent < len(data):
+                sent = os.write(self.fifo_fd, data[total_sent:])
+                if sent == 0:
+                    break
+                total_sent += sent
+        except OSError as e:
+            self.get_logger().error(f"Pipe write failed: {e}")
+            sys.exit(1)
 
     def run(self):
-        # This keeps the Qt event loop and ROS spinning
-        timer = QTimer()
-        timer.timeout.connect(lambda: rclpy.spin_once(self, timeout_sec=0))
-        timer.start(10) # 100Hz for ROS processing
+        # Allow Ctrl+C to work (signals Qt to quit)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
         
-        sys.exit(self.qt_app.exec())
+        # This keeps ROS spinning within the Qt loop
+        timer = QTimer()
+        timer.timeout.connect(self._ros_spin_once)
+        timer.start(10) # 100Hz
+        
+        return self.qt_app.exec()
+
+    def _ros_spin_once(self):
+        if rclpy.ok():
+            try:
+                rclpy.spin_once(self, timeout_sec=0)
+            except Exception:
+                pass
 
 def main(args=None):
     # Headless mode for Qt
@@ -112,8 +132,12 @@ def main(args=None):
     
     rclpy.init(args=args)
     renderer = WebRenderer()
-    renderer.run()
-    rclpy.shutdown()
+    exit_code = renderer.run()
+    
+    # Minimalistic cleanup to avoid wait_set errors
+    if rclpy.ok():
+        rclpy.shutdown()
+    sys.exit(exit_code)
 
 if __name__ == '__main__':
     main()
