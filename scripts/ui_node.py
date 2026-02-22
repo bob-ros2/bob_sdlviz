@@ -23,6 +23,14 @@ except ImportError as e:
     print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
     sys.exit(1)
 
+class CustomPage(QWebEnginePage):
+    def __init__(self, node, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.node = node
+
+    def javaScriptConsoleMessage(self, level, message, lineID, sourceID):
+        self.node.get_logger().info(f"[JS] {message} (line {lineID})")
+
 class WebRenderer(Node):
     def __init__(self):
         super().__init__('ui_renderer')
@@ -67,11 +75,13 @@ class WebRenderer(Node):
         self.view = QWebEngineView()
         self.view.resize(self.width, self.height)
         self.view.show() # Necessary for layout even in offscreen mode
-        self.page = self.view.page()
+        
+        # Use custom page for console logging
+        self.page = CustomPage(self)
+        self.view.setPage(self.page)
         
         # Page debugging
         self.page.loadFinished.connect(self._on_load_finished)
-        self.page.javaScriptConsoleMessage = self._on_console_message
         
         # Load local HTML
         html_path = Path(__file__).parent / "overlay.html"
@@ -91,9 +101,6 @@ class WebRenderer(Node):
             self.get_logger().info("HTML Page loaded successfully.")
         else:
             self.get_logger().error("HTML Page failed to load! Check file path and Chromium dependencies.")
-
-    def _on_console_message(self, level, message, line, source):
-        self.get_logger().info(f"[JS] {message} (line {line})")
 
     def listener_callback(self, msg):
         self.get_logger().info(f"Received token chunk (len={len(msg.data)})")
