@@ -19,8 +19,8 @@
  */
 
 usage() {
-  echo "Usage: $0 --path <fifo_path>"
-  echo "Example: ffmpeg ... -f rawvideo - | $0 --path /tmp/my_fifo"
+  echo "Usage: $0 --path <fifo_path>  (or --name)"
+  echo "Example: ffmpeg ... -f rawvideo -pix_fmt bgra - | $0 --path /tmp/my_fifo"
   exit 1
 }
 
@@ -29,7 +29,7 @@ FIFO_PATH=""
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    --path) FIFO_PATH="$2"; shift ;;
+    --path|--name) FIFO_PATH="$2"; shift ;;
     -h|--help) usage ;;
     *) echo "Unknown parameter: $1"; usage ;;
   esac
