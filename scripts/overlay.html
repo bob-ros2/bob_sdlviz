@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,11 +12,13 @@
   <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
   <style>
     body {
-      background: transparent;
+      background: #0f172a;
+      /* Solid Slate 900 for debugging visibility */
       margin: 0;
       overflow: hidden;
       font-family: 'Inter', sans-serif;
     }
+
     .glass {
       background: rgba(15, 23, 42, 0.7);
       backdrop-filter: blur(12px);
@@ -23,25 +26,65 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
-    .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #60a5fa; }
-    .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: #93c5fd; }
-    .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
-    .markdown-body code { background: rgba(255, 255, 255, 0.1); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
-    .markdown-body pre { background: rgba(0, 0, 0, 0.3); padding: 0.75rem; border-radius: 8px; overflow-x: auto; margin-bottom: 0.75rem; }
-    
+
+    .markdown-body h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #60a5fa;
+    }
+
+    .markdown-body h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #93c5fd;
+    }
+
+    .markdown-body p {
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+
+    .markdown-body code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .markdown-body pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.75rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 0.75rem;
+    }
+
     /* Animation for incoming tokens */
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
     .token-animate {
       animation: fadeIn 0.3s ease-out forwards;
     }
 
     /* Scrollbar hidden but functional */
-    ::-webkit-scrollbar { display: none; }
+    ::-webkit-scrollbar {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
   <div id="root"></div>
 
@@ -76,8 +119,8 @@
               <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
               <h3 className="text-sm font-bold tracking-widest uppercase text-blue-400">Bob AI Stream</h3>
             </div>
-            
-            <div 
+
+            <div
               ref={scrollRef}
               className="markdown-body flex-1 overflow-y-auto pr-2 scroll-smooth"
               dangerouslySetInnerHTML={{ __html: md.render(content) }}
@@ -91,4 +134,5 @@
     root.render(<App />);
   </script>
 </body>
+
 </html>

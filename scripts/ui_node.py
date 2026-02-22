@@ -78,6 +78,7 @@ class WebRenderer(Node):
         self.timer.start(int(1000 / self.fps))
 
     def listener_callback(self, msg):
+        self.get_logger().info(f"Received token chunk (len={len(msg.data)})")
         with self.lock:
             self.current_content += msg.data
             # Inject into JS
@@ -87,8 +88,9 @@ class WebRenderer(Node):
     def capture_frame(self):
         # Create a QImage to render into
         image = QImage(self.width, self.height, QImage.Format_ARGB32)
-        image.fill(0) # Transparent background
+        image.fill(0) # Transparent background (if HTML is transparent)
         
+        # Render the view into the image
         painter = QPainter(image)
         self.view.render(painter, QPoint(0, 0))
         painter.end()
@@ -96,7 +98,7 @@ class WebRenderer(Node):
         # Convert to raw bytes
         data = image.constBits().tobytes()
         
-        # Ensure full write to FIFO (prevents corruption in ffplay)
+        # Ensure full write to FIFO (prevents corruption/partial frames)
         try:
             total_sent = 0
             while total_sent < len(data):
@@ -109,7 +111,7 @@ class WebRenderer(Node):
             sys.exit(1)
 
     def run(self):
-        # Allow Ctrl+C to work (signals Qt to quit)
+        # Allow Ctrl+C to work
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         
         # This keeps ROS spinning within the Qt loop
@@ -134,7 +136,6 @@ def main(args=None):
     renderer = WebRenderer()
     exit_code = renderer.run()
     
-    # Minimalistic cleanup to avoid wait_set errors
     if rclpy.ok():
         rclpy.shutdown()
     sys.exit(exit_code)
