@@ -14,11 +14,13 @@ from std_msgs.msg import String
 # Qt imports (Using PySide6 for best WebEngine support)
 try:
     from PySide6.QtWidgets import QApplication
-    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
+    from PySide6.QtWebEngineCore import QWebEngineSettings
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from rclpy.executors import SingleThreadedExecutor
     from PySide6.QtCore import QUrl, QTimer, QSize
     from PySide6.QtGui import QImage, QPainter
-except ImportError:
-    print("Error: PySide6 not found. Please install it with: pip install PySide6")
+except ImportError as e:
+    print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
     sys.exit(1)
 
 class WebRenderer(Node):
@@ -61,9 +63,10 @@ class WebRenderer(Node):
         # Initialize Qt Application
         self.qt_app = QApplication.instance() or QApplication(sys.argv)
         
-        # Create WebPage
-        self.page = QWebEnginePage()
-        self.page.setViewportSize(QSize(self.width, self.height))
+        # Create WebEngineView (needed for sizing and rendering)
+        self.view = QWebEngineView()
+        self.view.resize(self.width, self.height)
+        self.page = self.view.page()
         
         # Load local HTML
         html_path = Path(__file__).parent / "overlay.html"
@@ -87,7 +90,7 @@ class WebRenderer(Node):
         image.fill(0) # Transparent background
         
         painter = QPainter(image)
-        self.page.view().render(painter)
+        self.view.render(painter)
         painter.end()
         
         # Convert to raw bytes. Qt's ARGB32 is exactly what SDL's BGRA expects
