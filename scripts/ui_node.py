@@ -15,7 +15,7 @@ from std_msgs.msg import String
 # Qt imports (Using PySide6 for best WebEngine support)
 try:
     from PySide6.QtWidgets import QApplication
-    from PySide6.QtWebEngineCore import QWebEngineSettings
+    from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from PySide6.QtCore import QUrl, QTimer, QSize, QPoint
     from PySide6.QtGui import QImage, QPainter
