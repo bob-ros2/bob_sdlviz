@@ -116,8 +116,9 @@ The node is controlled by sending JSON arrays to the `events` topic.
 
 ### Video Stream Integration
 
-To feed an external video source into sdlviz node:
+To feed an external video source into `sdlviz` node:
 
+#### 1. General FIFO streaming
 1. **Create a FIFO pipe**:
    ```bash
    mkfifo /tmp/overlay_video
@@ -128,17 +129,28 @@ To feed an external video source into sdlviz node:
    ffmpeg -re -f lavfi -i testsrc=size=854x480:rate=30 -f rawvideo -pix_fmt bgra /tmp/overlay_video
    ```
 
-3. **Spawn the layer** via JSON message to the `/events` topic:
-   ```json
-   {
-     "type": "VideoStream",
-     "topic": "/tmp/overlay_video",
-     "area": [220, 10, 414, 300],
-     "source_width": 854,
-     "source_height": 480,
-     "expire": 10.0
-   }
+#### 2. Streaming a Terminal Window (Linux/X11)
+To capture a specific terminal window:
+
+1. **Find window geometry**: Run `xwininfo` and click on the target terminal. Note the `-geometry` line (e.g., `854x480+10+10`).
+2. **Stream to FIFO**:
+   ```bash
+   # Use the width, height, and offsets from xwininfo
+   ffmpeg -re -f x11grab -video_size 854x480 -i :0.0+10,10 -f rawvideo -pix_fmt bgra /tmp/overlay_video
    ```
+
+#### 3. Spawn the layer
+Send JSON to the `/events` topic:
+```json
+{
+  "type": "VideoStream",
+  "topic": "/tmp/overlay_video",
+  "area": [220, 10, 414, 300],
+  "source_width": 854,
+  "source_height": 480,
+  "expire": 0.0
+}
+```
 
 > [!NOTE]
 > `sdlviz` expects exactly **4 bytes per pixel (BGRA)**. Using 3-byte formats (like RGB or BGR) will result in distorted images.
