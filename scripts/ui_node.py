@@ -66,6 +66,7 @@ class WebRenderer(Node):
         # Create WebEngineView (needed for sizing and rendering)
         self.view = QWebEngineView()
         self.view.resize(self.width, self.height)
+        self.view.show() # Necessary for layout even in offscreen mode
         self.page = self.view.page()
         
         # Page debugging
@@ -149,13 +150,15 @@ def main(args=None):
     # Headless and GPU-fix flags for Chromium
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     
-    # Chromium command line arguments
+    # 1. Initialize ROS first (it parses sys.argv/args and removes its own flags)
+    rclpy.init(args=args)
+    
+    # 2. THEN add Chromium flags for Qt/QApplication
     sys.argv.append("--disable-gpu")
     sys.argv.append("--no-sandbox")
     sys.argv.append("--disable-software-rasterizer")
-    sys.argv.append("--single-process") # Often helps in restricted Docker/NAS environments
+    sys.argv.append("--single-process")
     
-    rclpy.init(args=args)
     renderer = WebRenderer()
     exit_code = renderer.run()
     
