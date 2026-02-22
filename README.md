@@ -114,6 +114,32 @@ The node is controlled by sending JSON arrays to the `events` topic.
 - **`MarkerLayer`**: Creates a localized 2D marker rendering layer.
 - **`VideoStream`**: Creates an area that reads raw frames from a FIFO.
 
+### Video Stream Integration
+
+To feed an external video source into the dashboard:
+
+1. **Create a FIFO pipe**:
+   ```bash
+   mkfifo /tmp/overlay_video
+   ```
+
+2. **Feed the pipe** with FFmpeg (BGRA format at real-time speed):
+   ```bash
+   ffmpeg -re -f lavfi -i testsrc=size=854x480:rate=30 -f rawvideo -pix_fmt bgra /tmp/overlay_video
+   ```
+
+3. **Spawn the layer** via JSON message to the `/events` topic:
+   ```json
+   {
+     "type": "VideoStream",
+     "topic": "/tmp/overlay_video",
+     "area": [220, 10, 414, 300],
+     "source_width": 854,
+     "source_height": 480,
+     "expire": 10.0
+   }
+   ```
+
 ### Example JSON
 ```json
 [
