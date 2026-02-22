@@ -4,26 +4,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bob Overlay</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+  <title>Bob Overlay Premium</title>
   <style>
+    :root {
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.5);
+      --glass-bg: rgba(15, 23, 42, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.12);
+    }
+
     body {
       background: #0f172a;
+      /* Slate 900 fallback */
       margin: 0;
       padding: 0;
       overflow: hidden;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      color: white;
-    }
-
-    .glass {
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
-      border-radius: 2rem;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
     }
 
     #root-container {
@@ -35,137 +33,229 @@
       box-sizing: border-box;
     }
 
+    .glass-panel {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      border-left: 10px solid var(--accent);
+    }
+
+    .glass-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    }
+
+    header {
+      padding: 2rem 2.5rem 1.5rem 2.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .status-dot {
+      width: 1rem;
+      height: 1rem;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 20px var(--accent-glow);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+      }
+
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+      }
+
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+      }
+    }
+
+    .brand-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+
     #content-area {
       flex: 1;
+      padding: 2rem 2.5rem;
       overflow-y: auto;
-      padding-right: 15px;
-      /* Crucial for LLM streams: treat single newlines as breaks by default */
-      white-space: pre-wrap;
-      font-size: 1.4rem;
-      line-height: 1.6;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
     }
 
-    /* Markdown Styles */
-    .markdown-body h1 {
+    #content-area::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Premium Markdown Support */
+    .md-render {
+      font-size: 1.6rem;
+      line-height: 1.7;
+    }
+
+    .md-render h1 {
+      font-size: 2.8rem;
+      font-weight: 850;
+      margin: 1.5rem 0 1rem;
+      color: #60a5fa;
+      line-height: 1.2;
+    }
+
+    .md-render h2 {
       font-size: 2rem;
       font-weight: 800;
-      color: #60a5fa;
-      margin-top: 1.5rem;
-      margin-bottom: 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding-bottom: 0.5rem;
-    }
-
-    .markdown-body h2 {
-      font-size: 1.6rem;
-      font-weight: 700;
+      margin: 1.2rem 0 0.8rem;
       color: #93c5fd;
-      margin-top: 1.25rem;
-      margin-bottom: 0.75rem;
     }
 
-    .markdown-body strong {
-      color: #f8fafc;
-      font-weight: 800;
-      text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    .md-render p {
+      margin-bottom: 1.5rem;
     }
 
-    .markdown-body hr {
+    .md-render strong {
+      color: #fdfdfd;
+      font-weight: 850;
+      text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+    }
+
+    .md-render hr {
       border: 0;
-      border-top: 2px solid rgba(96, 165, 250, 0.3);
-      margin: 2rem 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      margin: 3rem 0;
+      opacity: 0.4;
     }
 
-    .markdown-body code {
+    .md-render code {
       background: rgba(0, 0, 0, 0.4);
-      padding: 0.2rem 0.5rem;
-      border-radius: 6px;
+      padding: 0.2em 0.5em;
+      border-radius: 0.5rem;
       font-family: 'Fira Code', monospace;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .markdown-body pre {
+    .md-render pre {
       background: rgba(0, 0, 0, 0.5);
-      padding: 1rem;
-      border-radius: 12px;
+      padding: 1.5rem;
+      border-radius: 1.25rem;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      margin: 1rem 0;
+      margin: 1.5rem 0;
       overflow-x: auto;
     }
 
-    ::-webkit-scrollbar {
-      width: 6px;
+    /* Animation for new lines */
+    .line-entry {
+      animation: slideIn 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
     }
 
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
   </style>
 </head>
 
 <body>
   <div id="root-container">
-    <div class="glass h-full w-full flex flex-col p-10 border-l-8 border-blue-500">
-      <div id="header" class="flex items-center gap-5 mb-8 border-b border-white/10 pb-6">
-        <div class="w-5 h-5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
-        <h3 class="text-blue-400 font-black tracking-[0.2em] text-2xl uppercase">Bob AI Realtime</h3>
-      </div>
-      <div id="content-area" class="markdown-body">
-        <h1># Engine Status</h1>
-        <p>Waiting for connection...</p>
+    <div class="glass-panel">
+      <header>
+        <div class="status-dot"></div>
+        <div class="brand-title">Bob intelligence</div>
+      </header>
+      <div id="content-area" class="md-render">
+        <div class="line-entry">
+          <h1># System Init</h1>
+          <p>Ready for mission parameters. Feed tokens to <code>/bob/llm_stream</code>.</p>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    console.log("Bob Overlay: Initializing Enhanced Engine...");
+    /**
+     * High-Fidelity Integrated Markdown Parser
+     * Handles complex patterns without external dependencies.
+     */
+    const parseMD = (text) => {
+      let html = text;
 
-    // Configure Markdown-it with better defaults for streams
-    let md;
-    const mdOptions = {
-      html: true,
-      linkify: true,
-      breaks: true, // Convert '\n' in paragraphs into <break>
-      typographer: true
+      // Pre-processing
+      html = html.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
+
+      // Inline block handling
+      html = html
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^\-\-\-$/gim, '<hr>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Paragraph conversion (respecting LLM line-bursts)
+      const lines = html.split('\n');
+      html = lines.map(line => {
+        if (!line.trim()) return '<br>';
+        if (line.startsWith('<')) return line; // Already tagged
+        return `<div class="line-entry">${line}</div>`;
+      }).join('');
+
+      return html;
     };
 
-    if (window.markdownit) {
-      md = window.markdownit(mdOptions);
-      console.log("Bob Overlay: Markdown-it loaded with 'breaks:true'");
-    } else {
-      console.warn("Bob Overlay: CDN blocked? Using integrated Micro-MD parser.");
-      // Fallback: A very simple regex-based parser for when CDN fails
-      md = {
-        render: (text) => {
-          return text
-            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-            .replace(/^\-\-\-$/gim, '<hr>')
-            .replace(/\n\n/gim, '<br><br>');
-        }
-      };
-    }
-
     const contentArea = document.getElementById('content-area');
+    console.log("Bob Overlay: Premium Engine V2 Loaded (Offline-WOW)");
 
     window.updateContent = (newContent) => {
-      // Pre-processing for horizontal rules (ensure newlines around ---)
-      const sanitized = newContent.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
-
       try {
-        contentArea.innerHTML = md.render(sanitized);
-        // Ensure white-space is normal after MD rendering if markdown-it worked
-        if (window.markdownit) contentArea.style.whiteSpace = "normal";
-
-        contentArea.scrollTop = contentArea.scrollHeight;
+        contentArea.innerHTML = parseMD(newContent);
+        // Instant cinematic scroll
+        contentArea.scrollTo({
+          top: contentArea.scrollHeight,
+          behavior: 'smooth'
+        });
       } catch (e) {
-        console.error("Bob Overlay: Render Error", e);
+        console.error("Overlay Render Error:", e);
       }
     };
 
-    setInterval(() => console.log("Bob Overlay: Uptime " + Math.floor(performance.now() / 1000) + "s"), 10000);
+    // Heartbeat
+    setInterval(() => {
+      console.log("Overlay Uptime: " + Math.floor(performance.now() / 1000) + "s");
+    }, 10000);
   </script>
 </body>
 

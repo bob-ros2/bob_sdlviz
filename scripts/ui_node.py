@@ -12,7 +12,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
-# Qt imports (Using PySide6 for best WebEngine support)
+# Qt imports
 try:
     from PySide6.QtWidgets import QApplication
     from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
@@ -35,6 +35,10 @@ class WebRenderer(Node):
     def __init__(self):
         super().__init__('ui_renderer')
         
+        # Log ROS Domain for transparency
+        domain_id = os.environ.get('ROS_DOMAIN_ID', '0 (default)')
+        self.get_logger().info(f"UI Renderer starting on ROS_DOMAIN_ID: {domain_id}")
+        
         # Parameters
         self.declare_parameter('path', '/tmp/overlay_video')
         self.declare_parameter('width', 854)
@@ -51,10 +55,10 @@ class WebRenderer(Node):
         if not os.path.exists(self.fifo_path):
             os.mkfifo(self.fifo_path)
         
-        # Open FIFO for writing (this will block until sdlviz opens it for reading)
+        # Open FIFO for writing
         self.get_logger().info(f"Opening FIFO: {self.fifo_path} (Waiting for reader...)")
         self.fifo_fd = os.open(self.fifo_path, os.O_WRONLY)
-        self.get_logger().info("FIFO opened for writing.")
+        self.get_logger().info("FIFO opened for writing. Streaming started.")
 
         # Shared state
         self.current_content = ""
@@ -65,45 +69,32 @@ class WebRenderer(Node):
             String,
             self.get_parameter('topic').value,
             self.listener_callback,
-            10
+            20 # Larger queue for fast streams
         )
 
         # Initialize Qt Application
         self.qt_app = QApplication.instance() or QApplication(sys.argv)
         
-        # Create WebEngineView (needed for sizing and rendering)
+        # Create WebEngineView
         self.view = QWebEngineView()
         self.view.resize(self.width, self.height)
         self.view.show() # Necessary for layout even in offscreen mode
         
-        # Use custom page for console logging
+        # Custom page for console logging
         self.page = CustomPage(self)
         self.view.setPage(self.page)
         
-        # Page debugging
-        self.page.loadFinished.connect(self._on_load_finished)
-        
         # Load local HTML
         html_path = Path(__file__).parent / "overlay.html"
-        if not html_path.exists():
-            self.get_logger().error(f"HTML file not found at: {html_path}")
-        else:
-            self.get_logger().info(f"Loading HTML from: {html_path}")
-            self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
+        self.get_logger().info(f"Loading UI from: {html_path}")
+        self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
         
         # Timer for frame capture
         self.timer = QTimer()
         self.timer.timeout.connect(self.capture_frame)
         self.timer.start(int(1000 / self.fps))
 
-    def _on_load_finished(self, ok):
-        if ok:
-            self.get_logger().info("HTML Page loaded successfully.")
-        else:
-            self.get_logger().error("HTML Page failed to load! Check file path and Chromium dependencies.")
-
     def listener_callback(self, msg):
-        self.get_logger().info(f"Received token chunk (len={len(msg.data)})")
         with self.lock:
             self.current_content += msg.data
             # Inject into JS
@@ -113,17 +104,15 @@ class WebRenderer(Node):
     def capture_frame(self):
         # Create a QImage to render into
         image = QImage(self.width, self.height, QImage.Format_ARGB32)
-        image.fill(0) # Transparent background (if HTML is transparent)
+        image.fill(0) # Transparent
         
-        # Render the view into the image
         painter = QPainter(image)
         self.view.render(painter, QPoint(0, 0))
         painter.end()
         
-        # Convert to raw bytes
         data = image.constBits().tobytes()
         
-        # Ensure full write to FIFO (prevents corruption/partial frames)
+        # Robust write to FIFO
         try:
             total_sent = 0
             while total_sent < len(data):
@@ -132,18 +121,18 @@ class WebRenderer(Node):
                     break
                 total_sent += sent
         except OSError as e:
-            self.get_logger().error(f"Pipe write failed: {e}")
-            sys.exit(1)
+            if e.errno == 32: # Broken pipe
+                self.get_logger().warn("Reader disconnected (Broken pipe). Stopping node.")
+                QApplication.quit()
+            else:
+                self.get_logger().error(f"FIFO write failed: {e}")
+                sys.exit(1)
 
     def run(self):
-        # Allow Ctrl+C to work
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-        # This keeps ROS spinning within the Qt loop
         timer = QTimer()
         timer.timeout.connect(self._ros_spin_once)
         timer.start(10) # 100Hz
-        
         return self.qt_app.exec()
 
     def _ros_spin_once(self):
@@ -154,13 +143,12 @@ class WebRenderer(Node):
                 pass
 
 def main(args=None):
-    # Headless and GPU-fix flags for Chromium
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     
-    # 1. Initialize ROS first (it parses sys.argv/args and removes its own flags)
+    # Init ROS
     rclpy.init(args=args)
     
-    # 2. THEN add Chromium flags for Qt/QApplication
+    # Chromium flags
     sys.argv.append("--disable-gpu")
     sys.argv.append("--no-sandbox")
     sys.argv.append("--disable-software-rasterizer")
