@@ -5,117 +5,167 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bob Overlay</title>
-  <!-- Tailwind is great, but we provide a fallback in case CDN is blocked -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
   <style>
     body {
       background: #0f172a;
-      /* Solid Slate 900 */
       margin: 0;
       padding: 0;
       overflow: hidden;
-      font-family: sans-serif;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: white;
     }
 
     .glass {
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      border-radius: 1.5rem;
+      box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+      border-radius: 2rem;
     }
 
-    /* Fallback if Tailwind fails */
     #root-container {
       display: flex;
       flex-direction: column;
       height: 100vh;
       width: 100vw;
-      padding: 2rem;
+      padding: 2.5rem;
       box-sizing: border-box;
     }
 
     #content-area {
       flex: 1;
       overflow-y: auto;
-      padding-right: 10px;
-    }
-
-    .markdown-body h1 {
-      font-size: 1.8rem;
-      font-weight: 800;
-      color: #60a5fa;
-      margin-bottom: 1rem;
-    }
-
-    .markdown-body p {
+      padding-right: 15px;
+      /* Crucial for LLM streams: treat single newlines as breaks by default */
+      white-space: pre-wrap;
       font-size: 1.4rem;
       line-height: 1.6;
+    }
+
+    /* Markdown Styles */
+    .markdown-body h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #60a5fa;
+      margin-top: 1.5rem;
       margin-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.5rem;
+    }
+
+    .markdown-body h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #93c5fd;
+      margin-top: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .markdown-body strong {
+      color: #f8fafc;
+      font-weight: 800;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+
+    .markdown-body hr {
+      border: 0;
+      border-top: 2px solid rgba(96, 165, 250, 0.3);
+      margin: 2rem 0;
     }
 
     .markdown-body code {
-      background: rgba(0, 0, 0, 0.3);
-      padding: 2px 6px;
-      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: 'Fira Code', monospace;
+      font-size: 1.2rem;
+    }
+
+    .markdown-body pre {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 1rem 0;
+      overflow-x: auto;
     }
 
     ::-webkit-scrollbar {
-      display: none;
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
     }
   </style>
 </head>
 
 <body>
   <div id="root-container">
-    <div class="glass h-full w-full flex flex-col p-8 border-l-8 border-blue-500">
-      <div id="header" class="flex items-center gap-4 mb-6 border-b border-white/10 pb-4">
-        <div id="status-alt" class="w-4 h-4 rounded-full bg-blue-500 animate-pulse"></div>
-        <h3 class="text-blue-400 font-bold tracking-widest text-xl uppercase">Bob AI Realtime Overlay</h3>
+    <div class="glass h-full w-full flex flex-col p-10 border-l-8 border-blue-500">
+      <div id="header" class="flex items-center gap-5 mb-8 border-b border-white/10 pb-6">
+        <div class="w-5 h-5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
+        <h3 class="text-blue-400 font-black tracking-[0.2em] text-2xl uppercase">Bob AI Realtime</h3>
       </div>
-      <div id="content-area" class="markdown-body scroll-smooth">
-        <h1># System Ready</h1>
-        <p>Waiting for tokens from ROS 2...</p>
+      <div id="content-area" class="markdown-body">
+        <h1># Engine Status</h1>
+        <p>Waiting for connection...</p>
       </div>
     </div>
   </div>
 
   <script>
-    console.log("Bob Overlay: Initializing Vanilla JS Engine...");
+    console.log("Bob Overlay: Initializing Enhanced Engine...");
 
-    // Fallback if markdown-it fails to load
+    // Configure Markdown-it with better defaults for streams
     let md;
+    const mdOptions = {
+      html: true,
+      linkify: true,
+      breaks: true, // Convert '\n' in paragraphs into <break>
+      typographer: true
+    };
+
     if (window.markdownit) {
-      md = window.markdownit({ html: true, linkify: true });
-      console.log("Bob Overlay: Markdown-it loaded.");
+      md = window.markdownit(mdOptions);
+      console.log("Bob Overlay: Markdown-it loaded with 'breaks:true'");
     } else {
-      console.error("Bob Overlay: Markdown-it NOT found!");
-      md = { render: (text) => text }; // Primitive fallback
+      console.warn("Bob Overlay: CDN blocked? Using integrated Micro-MD parser.");
+      // Fallback: A very simple regex-based parser for when CDN fails
+      md = {
+        render: (text) => {
+          return text
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+            .replace(/^\-\-\-$/gim, '<hr>')
+            .replace(/\n\n/gim, '<br><br>');
+        }
+      };
     }
 
     const contentArea = document.getElementById('content-area');
 
-    // Global function called by Python/Qt
     window.updateContent = (newContent) => {
-      console.log("Bob Overlay: Update triggered, length: " + newContent.length);
+      // Pre-processing for horizontal rules (ensure newlines around ---)
+      const sanitized = newContent.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
+
       try {
-        contentArea.innerHTML = md.render(newContent);
-        // Instant scroll to bottom
+        contentArea.innerHTML = md.render(sanitized);
+        // Ensure white-space is normal after MD rendering if markdown-it worked
+        if (window.markdownit) contentArea.style.whiteSpace = "normal";
+
         contentArea.scrollTop = contentArea.scrollHeight;
       } catch (e) {
-        console.error("Bob Overlay: Render error", e);
+        console.error("Bob Overlay: Render Error", e);
       }
     };
 
-    // Confirm we are alive every now and then
-    setInterval(() => {
-      console.log("Bob Overlay: Heartbeat " + new Date().toLocaleTimeString());
-    }, 5000);
-
-    console.log("Bob Overlay: Engine ready.");
+    setInterval(() => console.log("Bob Overlay: Uptime " + Math.floor(performance.now() / 1000) + "s"), 10000);
   </script>
 </body>
 
