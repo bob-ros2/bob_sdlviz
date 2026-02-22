@@ -140,6 +140,9 @@ To feed an external video source into the dashboard:
    }
    ```
 
+> [!NOTE]
+> `sdlviz` expects exactly **4 bytes per pixel (BGRA)**. Using 3-byte formats (like RGB or BGR) will result in distorted images.
+
 ### Example JSON
 ```json
 [
