@@ -141,18 +141,37 @@ To capture a specific terminal window and pipe it into the Docker container:
      docker exec -i nexus_streamer /root/ros2_ws/install/bob_sdlviz/lib/bob_sdlviz/write_fifo.sh --path /tmp/overlay_video
    ```
 
-#### 3. Spawn the layer
-Send JSON to the `/events` topic:
-```json
-{
-  "type": "VideoStream",
-  "topic": "/tmp/overlay_video",
-  "area": [220, 10, 414, 300],
-  "source_width": 854,
-  "source_height": 480,
-  "expire": 0.0
-}
-```
+### Premium UI Overlay (Glassmorphism & Markdown)
+
+For a modern "Browser Source" look with real-time Markdown rendering (ideal for LLM streams):
+
+1. **Install dependencies**:
+   ```bash
+   pip install PySide6
+   # In Docker, you might also need: apt-get install -y libxcb-cursor0 libgbm1 libnss3 libasound2
+   ```
+
+2. **Launch the Renderer Node**:
+   This node renders an offscreen Chromium instance and pipes frames to `/tmp/overlay_video`.
+   ```bash
+   ros2 run bob_sdlviz ui_node.py --ros-args -p path:=/tmp/overlay_video -p topic:=/bob/llm_stream
+   ```
+
+3. **Spawn the layer** in `sdlviz` via `/events`:
+   ```json
+   {
+     "type": "VideoStream",
+     "topic": "/tmp/overlay_video",
+     "area": [50, 50, 400, 600],
+     "source_width": 854,
+     "source_height": 480
+   }
+   ```
+
+4. **Feed the stream**: Send tokens to the configured topic.
+   ```bash
+   ros2 topic pub /bob/llm_stream std_msgs/msg/String "{data: '## Hello World\nThis is a **Premium Overlay**!'}" --once
+   ```
 
 > [!NOTE]
 > `sdlviz` expects exactly **4 bytes per pixel (BGRA)**. Using 3-byte formats (like RGB or BGR) will result in distorted images.
