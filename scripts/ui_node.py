@@ -17,7 +17,7 @@ try:
     from PySide6.QtWebEngineCore import QWebEngineSettings
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from rclpy.executors import SingleThreadedExecutor
-    from PySide6.QtCore import QUrl, QTimer, QSize
+    from PySide6.QtCore import QUrl, QTimer, QSize, QPoint
     from PySide6.QtGui import QImage, QPainter
 except ImportError as e:
     print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
@@ -90,7 +90,7 @@ class WebRenderer(Node):
         image.fill(0) # Transparent background
         
         painter = QPainter(image)
-        self.view.render(painter)
+        self.view.render(painter, QPoint(0, 0))
         painter.end()
         
         # Convert to raw bytes. Qt's ARGB32 is exactly what SDL's BGRA expects
