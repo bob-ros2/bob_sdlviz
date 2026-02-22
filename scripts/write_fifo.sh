@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-/**
- * @file write_fifo.sh
- * @brief Helper script to read from stdin and write to a named pipe (FIFO).
- */
+# @file write_fifo.sh
+# @brief Helper script to read from stdin and write to a named pipe (FIFO).
 
 usage() {
   echo "Usage: $0 --path <fifo_path>"
