@@ -96,14 +96,20 @@
       typographer: true
     });
 
+    console.log("Bob Overlay: JavaScript starting...");
+
     const App = () => {
-      const [content, setContent] = useState('');
+      const [content, setContent] = useState('# Waiting for tokens...\nIf you see this, React is working! 🚀');
       const scrollRef = useRef(null);
 
-      // This function will be called from Python/Qt
-      window.updateContent = (newContent) => {
-        setContent(newContent);
-      };
+      useEffect(() => {
+        console.log("Bob Overlay: React App mounted");
+        // Expose global function for Python to call
+        window.updateContent = (newContent) => {
+          console.log("Bob Overlay: Received new content (len=" + newContent.length + ")");
+          setContent(newContent);
+        };
+      }, []);
 
       // Auto-scroll to bottom
       useEffect(() => {
@@ -130,8 +136,13 @@
       );
     };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+      console.log("Bob Overlay: Render initiated");
+    } catch (e) {
+      console.error("Bob Overlay: Render failed", e);
+    }
   </script>
 </body>
 
