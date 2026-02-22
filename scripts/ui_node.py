@@ -68,14 +68,31 @@ class WebRenderer(Node):
         self.view.resize(self.width, self.height)
         self.page = self.view.page()
         
+        # Page debugging
+        self.page.loadFinished.connect(self._on_load_finished)
+        self.page.javaScriptConsoleMessage = self._on_console_message
+        
         # Load local HTML
         html_path = Path(__file__).parent / "overlay.html"
-        self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
+        if not html_path.exists():
+            self.get_logger().error(f"HTML file not found at: {html_path}")
+        else:
+            self.get_logger().info(f"Loading HTML from: {html_path}")
+            self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
         
         # Timer for frame capture
         self.timer = QTimer()
         self.timer.timeout.connect(self.capture_frame)
         self.timer.start(int(1000 / self.fps))
+
+    def _on_load_finished(self, ok):
+        if ok:
+            self.get_logger().info("HTML Page loaded successfully.")
+        else:
+            self.get_logger().error("HTML Page failed to load! Check file path and Chromium dependencies.")
+
+    def _on_console_message(self, level, message, line, source):
+        self.get_logger().info(f"[JS] {message} (line {line})")
 
     def listener_callback(self, msg):
         self.get_logger().info(f"Received token chunk (len={len(msg.data)})")
@@ -129,8 +146,14 @@ class WebRenderer(Node):
                 pass
 
 def main(args=None):
-    # Headless mode for Qt
+    # Headless and GPU-fix flags for Chromium
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    
+    # Chromium command line arguments
+    sys.argv.append("--disable-gpu")
+    sys.argv.append("--no-sandbox")
+    sys.argv.append("--disable-software-rasterizer")
+    sys.argv.append("--single-process") # Often helps in restricted Docker/NAS environments
     
     rclpy.init(args=args)
     renderer = WebRenderer()
