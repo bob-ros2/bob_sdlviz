@@ -130,13 +130,15 @@ To feed an external video source into `sdlviz` node:
    ```
 
 #### 2. Streaming a Terminal Window (Linux/X11)
-To capture a specific terminal window:
+To capture a specific terminal window and pipe it into the Docker container:
 
 1. **Find window geometry**: Run `xwininfo` and click on the target terminal. Note the `-geometry` line (e.g., `854x480+10+10`).
-2. **Stream to FIFO**:
+2. **Stream to container**:
    ```bash
-   # Use the width, height, and offsets from xwininfo
-   ffmpeg -re -f x11grab -video_size 854x480 -i :0.0+10,10 -f rawvideo -pix_fmt bgra /tmp/overlay_video
+   # Use the width, height, and offsets from xwininfo.
+   # The write_fifo.sh script inside the container creates the FIFO and handles the input.
+   ffmpeg -re -f x11grab -video_size 854x480 -i :0.0+10,10 -f rawvideo -pix_fmt bgra - | \
+     docker exec -i nexus_streamer /root/ros2_ws/install/bob_sdlviz/lib/bob_sdlviz/write_fifo.sh --path /tmp/overlay_video
    ```
 
 #### 3. Spawn the layer
