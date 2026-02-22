@@ -4,7 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bob Overlay Premium</title>
+  <title>Bob Overlay Premium (Local)</title>
+  <!-- Using local libraries to ensure offline reliability and table support -->
+  <script src="vendor/tailwind.js"></script>
+  <script src="vendor/markdown-it.min.js"></script>
   <style>
     :root {
       --accent: #3b82f6;
@@ -15,13 +18,11 @@
 
     body {
       background: #0f172a;
-      /* Slate 900 fallback */
       margin: 0;
       padding: 0;
       overflow: hidden;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: #f8fafc;
-      letter-spacing: -0.01em;
     }
 
     #root-container {
@@ -48,57 +49,46 @@
       border-left: 10px solid var(--accent);
     }
 
-    .glass-panel::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    }
-
     header {
-      padding: 2rem 2.5rem 1.5rem 2.5rem;
+      padding: 1.5rem 2.5rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       align-items: center;
-      gap: 1.25rem;
+      gap: 1rem;
     }
 
     .status-dot {
-      width: 1rem;
-      height: 1rem;
+      width: 0.8rem;
+      height: 0.8rem;
       background: var(--accent);
       border-radius: 50%;
-      box-shadow: 0 0 20px var(--accent-glow);
+      box-shadow: 0 0 15px var(--accent-glow);
       animation: pulse 2s infinite;
     }
 
     @keyframes pulse {
       0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        transform: scale(0.9);
+        opacity: 0.7;
       }
 
-      70% {
-        transform: scale(1);
-        box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+      50% {
+        transform: scale(1.1);
+        opacity: 1;
       }
 
       100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        transform: scale(0.9);
+        opacity: 0.7;
       }
     }
 
     .brand-title {
-      font-size: 1.5rem;
+      font-size: 1.2rem;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.3em;
+      letter-spacing: 0.4em;
       color: var(--accent);
-      text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
     }
 
     #content-area {
@@ -106,84 +96,99 @@
       padding: 2rem 2.5rem;
       overflow-y: auto;
       scrollbar-width: none;
-      mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
     }
 
     #content-area::-webkit-scrollbar {
       display: none;
     }
 
-    /* Premium Markdown Support */
+    /* Premium Markdown Support (Full Library) */
     .md-render {
-      font-size: 1.6rem;
-      line-height: 1.7;
+      font-size: 1.5rem;
+      line-height: 1.6;
     }
 
     .md-render h1 {
-      font-size: 2.8rem;
-      font-weight: 850;
+      font-size: 2.5rem;
+      font-weight: 900;
       margin: 1.5rem 0 1rem;
       color: #60a5fa;
-      line-height: 1.2;
     }
 
     .md-render h2 {
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-weight: 800;
       margin: 1.2rem 0 0.8rem;
       color: #93c5fd;
     }
 
     .md-render p {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
 
     .md-render strong {
       color: #fdfdfd;
-      font-weight: 850;
-      text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+      font-weight: 800;
     }
 
     .md-render hr {
       border: 0;
       height: 2px;
       background: linear-gradient(90deg, var(--accent), transparent);
-      margin: 3rem 0;
-      opacity: 0.4;
+      margin: 2rem 0;
+      opacity: 0.3;
     }
 
     .md-render code {
       background: rgba(0, 0, 0, 0.4);
-      padding: 0.2em 0.5em;
-      border-radius: 0.5rem;
-      font-family: 'Fira Code', monospace;
-      font-size: 1.3rem;
+      padding: 0.2em 0.4em;
+      border-radius: 0.4rem;
+      font-family: monospace;
+    }
+
+    /* Table Styling - Premium Glass Look */
+    .md-render table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1.5rem 0;
+      border-radius: 1rem;
+      overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .md-render pre {
-      background: rgba(0, 0, 0, 0.5);
-      padding: 1.5rem;
-      border-radius: 1.25rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      margin: 1.5rem 0;
-      overflow-x: auto;
+    .md-render th {
+      background: rgba(255, 255, 255, 0.05);
+      text-align: left;
+      padding: 1rem;
+      font-weight: 800;
+      color: var(--accent);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Animation for new lines */
+    .md-render td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .md-render tr:last-child td {
+      border-bottom: none;
+    }
+
     .line-entry {
-      animation: slideIn 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+      animation: slideIn 0.3s ease-out forwards;
     }
 
     @keyframes slideIn {
       from {
         opacity: 0;
-        transform: translateX(-10px);
+        transform: translateY(5px);
       }
 
       to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateY(0);
       }
     }
   </style>
@@ -194,68 +199,45 @@
     <div class="glass-panel">
       <header>
         <div class="status-dot"></div>
-        <div class="brand-title">Bob intelligence</div>
+        <div class="brand-title">Bob Intelligence</div>
       </header>
       <div id="content-area" class="md-render">
         <div class="line-entry">
           <h1># System Init</h1>
-          <p>Ready for mission parameters. Feed tokens to <code>/bob/llm_stream</code>.</p>
+          <p>Local libraries loaded. Waiting for LLM tokens...</p>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    /**
-     * High-Fidelity Integrated Markdown Parser
-     * Handles complex patterns without external dependencies.
-     */
-    const parseMD = (text) => {
-      let html = text;
-
-      // Pre-processing
-      html = html.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
-
-      // Inline block handling
-      html = html
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/^\-\-\-$/gim, '<hr>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>');
-
-      // Paragraph conversion (respecting LLM line-bursts)
-      const lines = html.split('\n');
-      html = lines.map(line => {
-        if (!line.trim()) return '<br>';
-        if (line.startsWith('<')) return line; // Already tagged
-        return `<div class="line-entry">${line}</div>`;
-      }).join('');
-
-      return html;
-    };
-
     const contentArea = document.getElementById('content-area');
-    console.log("Bob Overlay: Premium Engine V2 Loaded (Offline-WOW)");
+    let md;
+
+    // Initialize Markdown-it with full features
+    if (window.markdownit) {
+      md = window.markdownit({
+        html: true,
+        linkify: true,
+        breaks: true,
+        typographer: true
+      });
+      console.log("Bob Overlay: Local markdown-it initialized.");
+    } else {
+      console.warn("Bob Overlay: Local library fail! Using basic fallback.");
+      md = { render: (text) => text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') };
+    }
 
     window.updateContent = (newContent) => {
+      // Force HR onto new line
+      const sanitized = newContent.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
       try {
-        contentArea.innerHTML = parseMD(newContent);
-        // Instant cinematic scroll
-        contentArea.scrollTo({
-          top: contentArea.scrollHeight,
-          behavior: 'smooth'
-        });
+        contentArea.innerHTML = md.render(sanitized);
+        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'smooth' });
       } catch (e) {
-        console.error("Overlay Render Error:", e);
+        console.error("Render Error:", e);
       }
     };
-
-    // Heartbeat
-    setInterval(() => {
-      console.log("Overlay Uptime: " + Math.floor(performance.now() / 1000) + "s");
-    }, 10000);
   </script>
 </body>
 
