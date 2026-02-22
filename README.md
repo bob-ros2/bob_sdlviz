@@ -143,18 +143,18 @@ To capture a specific terminal window and pipe it into the Docker container:
 
 ### Premium UI Overlay (Glassmorphism & Markdown)
 
-For a modern "Browser Source" look with real-time Markdown rendering (ideal for LLM streams):
+For a modern "Browser Source" look with real-time Markdown rendering (ideal for LLM streams), use the **`webvideo`** node from the [**`bob_av_tools`**](https://github.com/bob-ros2/bob_av_tools) package:
 
 1. **Install dependencies**:
    ```bash
-   pip install PySide6
+   pip install PySide6 numpy
    # In Docker, you might also need: apt-get install -y libxcb-cursor0 libgbm1 libnss3 libasound2
    ```
 
 2. **Launch the Renderer Node**:
-   This node renders an offscreen Chromium instance and pipes frames to `/tmp/overlay_video`.
+   This node renders an offscreen Chromium instance and pipes frames to `/tmp/overlay_video`. It can also publish to a ROS topic.
    ```bash
-   ros2 run bob_sdlviz ui_node.py --ros-args -p path:=/tmp/overlay_video -p topic:=/bob/llm_stream
+   ros2 run bob_av_tools webvideo --ros-args -p fifo_path:=/tmp/overlay_video -p sub_topic:=/bob/llm_stream
    ```
 
 3. **Spawn the layer** in `sdlviz` via `/events`:

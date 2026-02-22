@@ -1,0 +1,39 @@
+[
+    {
+        "type": "MarkerLayer",
+        "topic": "/bob/marker_array",
+        "area": [
+            0,
+            0,
+            854,
+            480
+        ],
+        "scale": 1200.0,
+        "offset_x": 0.0,
+        "offset_y": -50.0
+    },
+    {
+        "topic": "/bob/llm_stream",
+        "area": [
+            150,
+            50,
+            554,
+            380
+        ],
+        "line_limit": 15,
+        "wrap_width": 60,
+        "align": "center",
+        "text_color": [
+            0,
+            255,
+            230,
+            255
+        ],
+        "bg_color": [
+            0,
+            0,
+            0,
+            180
+        ]
+    }
+]

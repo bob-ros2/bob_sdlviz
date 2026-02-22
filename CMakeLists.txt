@@ -45,18 +45,10 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY
-  scripts/vendor
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 install(PROGRAMS
   scripts/audio_bridge.py
   scripts/feed_audio.sh
   scripts/start_stream.sh
-  scripts/write_fifo.sh
-  scripts/ui_node.py
-  scripts/overlay.html
   DESTINATION lib/${PROJECT_NAME}
 )
 
