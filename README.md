@@ -116,7 +116,7 @@ The node is controlled by sending JSON arrays to the `events` topic.
 
 ### Video Stream Integration
 
-To feed an external video source into the dashboard:
+To feed an external video source into sdlviz node:
 
 1. **Create a FIFO pipe**:
    ```bash
