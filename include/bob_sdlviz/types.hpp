@@ -143,17 +143,29 @@ public:
 
   /**
    * @brief Starts the background reader thread.
+   *
+   * Opens the FIFO non-blockingly (to avoid hanging if no writer is present),
+   * then switches to blocking mode for reliable frame reads. Automatically
+   * reconnects if the producer disconnects or has not yet started.
    */
   void start()
   {
     reader_thread_ = std::thread(
       [this]() {
         while (!stop_flag_) {
-          int fd = open(path_.c_str(), O_RDONLY);
+          // O_NONBLOCK: don't hang if webvideo isn't running yet
+          int fd = open(path_.c_str(), O_RDONLY | O_NONBLOCK);
           if (fd == -1) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
             continue;
           }
+          // Switch back to blocking for reliable full-frame reads
+          int flags = fcntl(fd, F_GETFL, 0);
+          fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+
+          RCLCPP_INFO(
+            rclcpp::get_logger("sdlviz"),
+            "FIFO video stream connected: %s", path_.c_str());
 
           std::vector<uint8_t> buffer(frame_size_);
           while (!stop_flag_) {
@@ -176,6 +188,10 @@ public:
             }
           }
           close(fd);
+          RCLCPP_INFO(
+            rclcpp::get_logger("sdlviz"),
+            "FIFO video stream disconnected: %s (reconnecting...)",
+            path_.c_str());
         }
       });
   }

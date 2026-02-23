@@ -31,8 +31,10 @@
 using namespace std::chrono_literals;
 
 /**
- * @brief Helper functions to get environment variables with various default types.
- * @{
+ * @brief Gets an environment variable as a std::string.
+ * @param name The environment variable name.
+ * @param default_val Value to return if the variable is not set.
+ * @return The variable value as a string, or default_val if not set.
  */
 static std::string get_env(const char * name, const std::string & default_val)
 {
@@ -40,6 +42,12 @@ static std::string get_env(const char * name, const std::string & default_val)
   return val ? std::string(val) : default_val;
 }
 
+/**
+ * @brief Gets an environment variable as an int.
+ * @param name The environment variable name.
+ * @param default_val Value to return if the variable is not set or not parseable.
+ * @return The variable value as an int, or default_val on failure.
+ */
 static int get_env(const char * name, int default_val)
 {
   const char * val = std::getenv(name);
@@ -53,6 +61,12 @@ static int get_env(const char * name, int default_val)
   }
 }
 
+/**
+ * @brief Gets an environment variable as a double.
+ * @param name The environment variable name.
+ * @param default_val Value to return if the variable is not set or not parseable.
+ * @return The variable value as a double, or default_val on failure.
+ */
 static double get_env(const char * name, double default_val)
 {
   const char * val = std::getenv(name);
@@ -66,6 +80,15 @@ static double get_env(const char * name, double default_val)
   }
 }
 
+/**
+ * @brief Gets an environment variable as a bool.
+ *
+ * Accepts the strings "true", "1", "yes", or "on" (case-insensitive) as true.
+ * Any other non-empty value is treated as false.
+ * @param name The environment variable name.
+ * @param default_val Value to return if the variable is not set.
+ * @return The parsed boolean value, or default_val if not set.
+ */
 static bool get_env(const char * name, bool default_val)
 {
   const char * val = std::getenv(name);
