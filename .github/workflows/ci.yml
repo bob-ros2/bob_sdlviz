@@ -1,0 +1,49 @@
+name: CI – Build & Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: src/bob_sdlviz
+
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            build-essential \
+            cmake \
+            libsdl2-dev \
+            libsdl2-ttf-dev \
+            nlohmann-json3-dev \
+            ros-humble-visualization-msgs \
+            ros-humble-ament-lint-auto \
+            ros-humble-ament-lint-common \
+            ros-humble-ament-cmake-cppcheck \
+            ros-humble-ament-cmake-cpplint \
+            ros-humble-ament-cmake-copyright \
+          && rm -rf /var/lib/apt/lists/*
+
+      - name: Build
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-select bob_sdlviz
+
+      - name: Test
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          colcon test --packages-select bob_sdlviz --event-handlers console_cohesion+
+          colcon test-result --verbose

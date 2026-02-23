@@ -1,5 +1,8 @@
 # bob_sdlviz
 
+[![CI – Build & Test](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/ci.yml)
+[![Docker – GHCR](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml)
+
 A high-performance ROS 2 visualization node based on SDL2. Designed for flexible, headless streaming of markers, video frames, and dynamic text overlays to platforms like Twitch.
 
 ## Table of Contents
@@ -253,6 +256,15 @@ Use Docker Compose for the easiest deployment. It handles volume mounting for th
 docker compose up --build
 ```
 *Note: The container runs with `network_mode: host` to allow seamless discovery of ROS topics on your local network.*
+
+### Pre-built Image (GHCR)
+A pre-built image is automatically published to the GitHub Container Registry on every push to `main`:
+
+```bash
+docker pull ghcr.io/bob-ros2/bob-sdlviz:latest
+```
+
+The image is also tagged with the short Git commit SHA (`sha-xxxxxxx`) for reproducible deployments.
 
 ---
 
