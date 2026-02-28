@@ -83,10 +83,7 @@ trap cleanup EXIT
 
 # --- Launch Application ---
 echo "Starting sdlviz node..."
-ros2 run bob_sdlviz sdlviz --ros-args \
-    --params-file "$SDLVIZ_PARAMS_PATH" \
-    -p config_file_path:="$SDLVIZ_CONFIG_PATH" \
-    --log-level bob.sdlviz:=info &
+ros2 run bob_sdlviz sdlviz --ros-args "$@" &
 
 NODE_PID=$!
 
@@ -104,9 +101,7 @@ while true
 do
     if ! kill -0 $NODE_PID 2>/dev/null; then
         echo "Error: sdlviz node (PID: $NODE_PID) is not running. Restarting node..."
-        ros2 run bob_sdlviz sdlviz --ros-args \
-            --params-file "$SDLVIZ_PARAMS_PATH" \
-            -p config_file_path:="$SDLVIZ_CONFIG_PATH" &
+        ros2 run bob_sdlviz sdlviz --ros-args "$@" &
         NODE_PID=$!
         sleep 2
     fi

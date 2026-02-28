@@ -309,7 +309,8 @@ Ensure the following parameters are set (either in `.env` or as ROS parameters):
 
 ### 3. FFMPEG Orchestration
 The primary entrypoint in the container (`start_stream.sh`) automatically coordinates:
-- Starting the `sdlviz` node.
+- Starting the `sdlviz` node. Any arguments passed to `start_stream.sh` are forwarded as ROS 2 arguments.
+  - **Example**: `./scripts/start_stream.sh -r __ns:=/my_namespace`
 - Starting the `audio_bridge.py` to provide a baseline silent audio stream.
 - Launching `ffmpeg` to combine the video pipe and audio pipe into a single FLV stream sent to Twitch.
 
