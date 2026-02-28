@@ -36,7 +36,6 @@ export SDLVIZ_FPS="${SDLVIZ_FPS:-30}"
 export SDLVIZ_SHOW_WINDOW="${SDLVIZ_SHOW_WINDOW:-true}"
 export SDLVIZ_STREAM_OUTPUT="${SDLVIZ_STREAM_OUTPUT:-true}"
 export SDLVIZ_CONFIG_PATH="${SDLVIZ_CONFIG_PATH:-$PROJECT_ROOT/config/sdlviz.json}"
-export SDLVIZ_PARAMS_PATH="${SDLVIZ_PARAMS_PATH:-$PROJECT_ROOT/config/sdlviz.yaml}"
 
 export STREAM_KEY="${TWITCH_STREAM_KEY}"
 export INGEST_SERVER="${INGEST_SERVER:-rtmp://live-fra.twitch.tv/app/}"
