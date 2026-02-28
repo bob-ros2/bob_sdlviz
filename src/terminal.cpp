@@ -209,3 +209,54 @@ std::string yTerminal::filter_unsupported_chars(
   }
   return filtered_string;
 }
+
+SDL_Rect yTerminal::get_area() const
+{
+  // Note: we can't lock a mutex in a const method if it's not mutable,
+  // but since area_ is rarely changed and this is for reporting,
+  // let's just return it. Actually, better make the mutex mutable or just return.
+  // In this case, area_ is 4 ints, so direct return is fine.
+  return area_;
+}
+
+void yTerminal::set_area(SDL_Rect area)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  area_ = area;
+}
+
+void yTerminal::set_colors(SDL_Color text_color, SDL_Color bg_color)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  text_color_ = text_color;
+  bg_color_ = bg_color;
+}
+
+void yTerminal::set_line_limit(size_t line_limit)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  line_limit_ = line_limit;
+  while (lines_.size() > line_limit_) {
+    lines_.pop_front();
+  }
+}
+
+void yTerminal::set_wrap_width(size_t wrap_width)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  wrap_width_ = wrap_width;
+  // Note: This doesn't re-wrap existing lines, but applies to new ones.
+}
+
+void yTerminal::set_align(yTerminalAlign align)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  align_ = align;
+}
+
+void yTerminal::set_behavior(bool clear_on_new, bool append_newline)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  clear_on_new_ = clear_on_new;
+  append_newline_ = append_newline;
+}

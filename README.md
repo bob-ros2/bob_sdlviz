@@ -103,14 +103,26 @@ Many parameters can be mapped from environment variables for easier Docker integ
 ### Topics
 
 #### Subscribed
-- `events` (`std_msgs/msg/String`): Primary control topic. Receives JSON arrays to define dynamic layers.
+- `events` (`std_msgs/msg/String`): Primary control topic. Receives JSON arrays to define, update, or remove dynamic layers.
 - **Dynamic Topics**: Subscribes to topics defined in the JSON configuration (e.g., marker topics or text strings).
+
+#### Published
+- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of all layers as a JSON array whenever a change occurs.
 
 ---
 
 ## Dynamic Configuration
 
-The node is controlled by sending JSON arrays to the `events` topic.
+The node is controlled by sending JSON arrays to the `events` topic. Each object in the array represents a layer operation.
+
+### Layer Identification (`id`)
+Every layer can have an optional `id` field.
+- **Explicit ID**: Use this to uniquely identify a layer for later updates or removal.
+- **Auto-ID**: If `id` is omitted, the system automatically assigns a sequential ID (`id0`, `id1`, `id2`, ...).
+
+### Actions
+- **`add` (default)**: Creates a new layer or updates an existing one if the `id` already exists.
+- **`remove`**: Deletes the layer with the specified `id`.
 
 ### Layer Types
 - **`String`**: Creates a text terminal area.
@@ -180,9 +192,12 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
 > `sdlviz` expects exactly **4 bytes per pixel (BGRA)**. Using 3-byte formats (like RGB or BGR) will result in distorted images.
 
 ### Example JSON
+
+**Add/Update a Terminal and Marker Layer:**
 ```json
 [
   {
+    "id": "status_log",
     "type": "String",
     "topic": "/bob/log",
     "area": [10, 10, 400, 200],
@@ -190,11 +205,22 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
     "bg_color": [0, 0, 0, 150]
   },
   {
+    "id": "scene_markers",
     "type": "MarkerLayer",
     "topic": "/bob/markers",
     "area": [420, 10, 400, 400],
     "scale": 1500.0,
     "exclude_ns": "background"
+  }
+]
+```
+
+**Remove a Layer:**
+```json
+[
+  {
+    "id": "status_log",
+    "action": "remove"
   }
 ]
 ```

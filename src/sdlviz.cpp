@@ -283,6 +283,9 @@ SdlVizNode::SdlVizNode()
     }
   }
 
+  events_changed_pub_ = this->create_publisher<std_msgs::msg::String>(
+    "events_changed", 10);
+
   auto config_path = this->get_parameter("config_file_path").as_string();
   if (!config_path.empty()) {
     std::ifstream config_file(config_path);
@@ -391,23 +394,66 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
       return;
     }
 
-    RCLCPP_INFO(
-      this->get_logger(), "Processing %zu dynamic layers.",
-      config_array.size());
+    bool changed = false;
 
     for (const auto & config : config_array) {
+      std::string action = config.value("action", "add");
       std::string type = config.value("type", "String");
+      std::string topic = config.value("topic", "");
+      std::string id = config.value("id", "");
 
+      if (id.empty()) {
+        if (action == "remove") {
+          continue;  // Cannot remove without ID
+        }
+        // Generate a unique ID that doesn't collide with existing ones
+        while (true) {
+          std::string candidate = "id" + std::to_string(next_id_num_++);
+          bool collision = false;
+          {
+            std::lock_guard<std::mutex> lock_t(terminals_mutex_);
+            std::lock_guard<std::mutex> lock_v(video_streams_mutex_);
+            std::lock_guard<std::mutex> lock_m(marker_layers_mutex_);
+            if (dynamic_terminals_.count(candidate) ||
+              dynamic_video_streams_.count(candidate) ||
+              dynamic_marker_layers_.count(candidate))
+            {
+              collision = true;
+            }
+          }
+          if (!collision) {
+            id = candidate;
+            break;
+          }
+        }
+      }
+
+      if (action == "remove") {
+        std::lock_guard<std::mutex> lock_t(terminals_mutex_);
+        std::lock_guard<std::mutex> lock_v(video_streams_mutex_);
+        std::lock_guard<std::mutex> lock_m(marker_layers_mutex_);
+
+        if (dynamic_terminals_.erase(id)) {
+          RCLCPP_INFO(this->get_logger(), "Removed terminal: %s", id.c_str());
+          changed = true;
+        } else if (dynamic_video_streams_.erase(id)) {
+          RCLCPP_INFO(this->get_logger(), "Removed video stream: %s", id.c_str());
+          changed = true;
+        } else if (dynamic_marker_layers_.erase(id)) {
+          RCLCPP_INFO(this->get_logger(), "Removed marker layer: %s", id.c_str());
+          changed = true;
+        }
+        continue;
+      }
+
+      // Handle Add/Update
       if (type == "String") {
-        if (!config.contains("topic") || !config.contains("area")) {
+        if (topic.empty() || !config.contains("area")) {
           continue;
         }
-        std::string topic = config["topic"];
         auto area_json = config["area"];
-        SDL_Rect area = {area_json[0], area_json[1], area_json[2],
-          area_json[3]};
+        SDL_Rect area = {area_json[0], area_json[1], area_json[2], area_json[3]};
 
-        double lifetime_sec = config.value("expire", 0.0);
         size_t line_limit = config.value("line_limit", 10);
         size_t wrap_width = config.value("wrap_width", 50);
         bool clear_on_new = config.value("clear_on_new", false);
@@ -432,115 +478,162 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
         SDL_Color bg_color = {(Uint8)bg_color_json[0], (Uint8)bg_color_json[1],
           (Uint8)bg_color_json[2], (Uint8)bg_color_json[3]};
 
-        auto dt = std::make_unique<DynamicTerminal>();
-        dt->terminal = std::make_unique<yTerminal>(
-          font_, line_limit, wrap_width, area, text_color, bg_color, align,
-          clear_on_new, append_newline);
-        dt->creation_time = this->now();
-        dt->lifetime = rclcpp::Duration::from_seconds(lifetime_sec);
-
-        RCLCPP_INFO(
-          this->get_logger(), "Created dynamic terminal for topic: %s",
-          topic.c_str());
-
-        dt->subscriber = this->create_subscription<std_msgs::msg::String>(
-          topic, 10,
-          [this, topic](const std_msgs::msg::String::SharedPtr sub_msg) {
-            std::lock_guard<std::mutex> lock(terminals_mutex_);
-            if (dynamic_terminals_.count(topic)) {
-              dynamic_terminals_[topic]->terminal->append(sub_msg->data);
-            }
-          });
-
         std::lock_guard<std::mutex> lock(terminals_mutex_);
-        dynamic_terminals_[topic] = std::move(dt);
+        if (dynamic_terminals_.count(id)) {
+          // Update existing
+          auto & dt = dynamic_terminals_[id];
+          dt->terminal->set_area(area);
+          dt->terminal->set_colors(text_color, bg_color);
+          dt->terminal->set_line_limit(line_limit);
+          dt->terminal->set_wrap_width(wrap_width);
+          dt->terminal->set_align(align);
+          dt->terminal->set_behavior(clear_on_new, append_newline);
+          dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+          dt->topic = topic;
+          RCLCPP_INFO(this->get_logger(), "Updated terminal: %s", id.c_str());
+        } else {
+          // Create new
+          auto dt = std::make_unique<DynamicTerminal>();
+          dt->id = id;
+          dt->topic = topic;
+          dt->terminal = std::make_unique<yTerminal>(
+            font_, line_limit, wrap_width, area, text_color, bg_color, align,
+            clear_on_new, append_newline);
+          dt->creation_time = this->now();
+          dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+
+          RCLCPP_INFO(
+            this->get_logger(), "Created terminal: %s (Topic: %s)",
+            id.c_str(), topic.c_str());
+
+          dt->subscriber = this->create_subscription<std_msgs::msg::String>(
+            topic, 10,
+            [this, id](const std_msgs::msg::String::SharedPtr sub_msg) {
+              std::lock_guard<std::mutex> lock(terminals_mutex_);
+              if (dynamic_terminals_.count(id)) {
+                dynamic_terminals_[id]->terminal->append(sub_msg->data);
+              }
+            });
+          dynamic_terminals_[id] = std::move(dt);
+        }
+        changed = true;
 
       } else if (type == "VideoStream") {
-        if (!config.contains("topic") || !config.contains("area")) {
+        if (topic.empty() || !config.contains("area")) {
           continue;
         }
-        std::string pipe_path = config["topic"];
         auto area_json = config["area"];
-        auto vs = std::make_unique<DynamicVideoStream>();
-        vs->area = {area_json[0], area_json[1], area_json[2], area_json[3]};
-        vs->source_width = config.value("source_width", 640);
-        vs->source_height = config.value("source_height", 480);
-
-        vs->texture = SDL_CreateTexture(
-          renderer_, SDL_PIXELFORMAT_BGRA32,
-          SDL_TEXTUREACCESS_STREAMING,
-          vs->source_width, vs->source_height);
-        vs->creation_time = this->now();
-        vs->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
-
-        vs->reader = std::make_unique<FifoReader>(
-          pipe_path, vs->source_width,
-          vs->source_height);
-        vs->reader->start();
-
-        RCLCPP_INFO(
-          this->get_logger(), "Created video stream layer on pipe: %s",
-          pipe_path.c_str());
+        SDL_Rect area = {area_json[0], area_json[1], area_json[2], area_json[3]};
 
         std::lock_guard<std::mutex> lock(video_streams_mutex_);
-        dynamic_video_streams_[pipe_path] = std::move(vs);
+        if (dynamic_video_streams_.count(id)) {
+          auto & vs = dynamic_video_streams_[id];
+          vs->area = area;
+          vs->topic = topic;
+          vs->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+          RCLCPP_INFO(this->get_logger(), "Updated video stream: %s", id.c_str());
+        } else {
+          auto vs = std::make_unique<DynamicVideoStream>();
+          vs->id = id;
+          vs->topic = topic;
+          vs->area = area;
+          vs->source_width = config.value("source_width", 640);
+          vs->source_height = config.value("source_height", 480);
+
+          vs->texture = SDL_CreateTexture(
+            renderer_, SDL_PIXELFORMAT_BGRA32,
+            SDL_TEXTUREACCESS_STREAMING,
+            vs->source_width, vs->source_height);
+          vs->creation_time = this->now();
+          vs->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+
+          vs->reader = std::make_unique<FifoReader>(
+            topic, vs->source_width,
+            vs->source_height);
+          vs->reader->start();
+
+          RCLCPP_INFO(
+            this->get_logger(), "Created video stream: %s (Pipe: %s)",
+            id.c_str(), topic.c_str());
+
+          dynamic_video_streams_[id] = std::move(vs);
+        }
+        changed = true;
 
       } else if (type == "MarkerLayer") {
-        if (!config.contains("topic") || !config.contains("area")) {
+        if (topic.empty() || !config.contains("area")) {
           continue;
         }
-        std::string topic = config["topic"];
         auto area_json = config["area"];
-        auto ml = std::make_unique<DynamicMarkerLayer>();
-        ml->area = {area_json[0], area_json[1], area_json[2], area_json[3]};
-        ml->scale = config.value("scale", 1000.0);
-        ml->offset_x = config.value("offset_x", 0.0);
-        ml->offset_y = config.value("offset_y", 0.0);
-        ml->creation_time = this->now();
-        ml->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
-
-        if (config.contains("exclude_ns")) {
-          std::string ns_str = config["exclude_ns"];
-          std::stringstream ss(ns_str);
-          std::string ns;
-          while (std::getline(ss, ns, ',')) {
-            if (!ns.empty()) {
-              ml->excluded_ns.push_back(ns);
-            }
-          }
-        }
-
-        RCLCPP_INFO(
-          this->get_logger(),
-          "Created marker layer on topic: %s (Scale: %.2f)",
-          topic.c_str(), ml->scale);
-
-        ml->subscriber =
-          this->create_subscription<visualization_msgs::msg::MarkerArray>(
-          topic, 10,
-          [this, topic](
-            const visualization_msgs::msg::MarkerArray::SharedPtr msg) {
-            std::lock_guard<std::mutex> lock(marker_layers_mutex_);
-            if (dynamic_marker_layers_.count(topic)) {
-              auto & layer = dynamic_marker_layers_[topic];
-              auto sorted_msg =
-              std::make_shared<visualization_msgs::msg::MarkerArray>(
-                *msg);
-              std::sort(
-                sorted_msg->markers.begin(),
-                sorted_msg->markers.end(),
-                [](const visualization_msgs::msg::Marker & a,
-                const visualization_msgs::msg::Marker & b) {
-                  return a.pose.position.x > b.pose.position.x;
-                });
-              std::lock_guard<std::mutex> data_lock(layer->data_mutex);
-              layer->last_markers = sorted_msg;
-            }
-          });
+        SDL_Rect area = {area_json[0], area_json[1], area_json[2], area_json[3]};
 
         std::lock_guard<std::mutex> lock(marker_layers_mutex_);
-        dynamic_marker_layers_[topic] = std::move(ml);
+        if (dynamic_marker_layers_.count(id)) {
+          auto & ml = dynamic_marker_layers_[id];
+          ml->area = area;
+          ml->topic = topic;
+          ml->scale = config.value("scale", ml->scale);
+          ml->offset_x = config.value("offset_x", ml->offset_x);
+          ml->offset_y = config.value("offset_y", ml->offset_y);
+          ml->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+          RCLCPP_INFO(this->get_logger(), "Updated marker layer: %s", id.c_str());
+        } else {
+          auto ml = std::make_unique<DynamicMarkerLayer>();
+          ml->id = id;
+          ml->topic = topic;
+          ml->area = area;
+          ml->scale = config.value("scale", 1000.0);
+          ml->offset_x = config.value("offset_x", 0.0);
+          ml->offset_y = config.value("offset_y", 0.0);
+          ml->creation_time = this->now();
+          ml->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+
+          if (config.contains("exclude_ns")) {
+            std::string ns_str = config["exclude_ns"];
+            std::stringstream ss(ns_str);
+            std::string ns;
+            while (std::getline(ss, ns, ',')) {
+              if (!ns.empty()) {
+                ml->excluded_ns.push_back(ns);
+              }
+            }
+          }
+
+          RCLCPP_INFO(
+            this->get_logger(),
+            "Created marker layer: %s (Topic: %s)",
+            id.c_str(), topic.c_str());
+
+          ml->subscriber =
+            this->create_subscription<visualization_msgs::msg::MarkerArray>(
+            topic, 10,
+            [this, id](
+              const visualization_msgs::msg::MarkerArray::SharedPtr msg) {
+              std::lock_guard<std::mutex> lock(marker_layers_mutex_);
+              if (dynamic_marker_layers_.count(id)) {
+                auto & layer = dynamic_marker_layers_[id];
+                auto sorted_msg =
+                std::make_shared<visualization_msgs::msg::MarkerArray>(
+                  *msg);
+                std::sort(
+                  sorted_msg->markers.begin(),
+                  sorted_msg->markers.end(),
+                  [](const visualization_msgs::msg::Marker & a,
+                  const visualization_msgs::msg::Marker & b) {
+                    return a.pose.position.x > b.pose.position.x;
+                  });
+                std::lock_guard<std::mutex> data_lock(layer->data_mutex);
+                layer->last_markers = sorted_msg;
+              }
+            });
+          dynamic_marker_layers_[id] = std::move(ml);
+        }
+        changed = true;
       }
+    }
+
+    if (changed) {
+      publish_current_state();
     }
   } catch (const std::exception & e) {
     RCLCPP_ERROR(
@@ -548,6 +641,63 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
       e.what());
   } catch (...) {
     RCLCPP_ERROR(this->get_logger(), "Unknown error parsing dynamic config JSON.");
+  }
+}
+
+/**
+ * @brief Serializes the current state of all layers and publishes to events_changed.
+ */
+void SdlVizNode::publish_current_state()
+{
+  using json = nlohmann::json;
+  json state = json::array();
+
+  {
+    std::lock_guard<std::mutex> lock(terminals_mutex_);
+    for (const auto & pair : dynamic_terminals_) {
+      const auto & dt = pair.second;
+      json item;
+      item["id"] = dt->id;
+      item["type"] = "String";
+      item["topic"] = dt->topic;
+      item["area"] = json::array(
+        {dt->terminal->get_area().x, dt->terminal->get_area().y,
+          dt->terminal->get_area().w, dt->terminal->get_area().h});
+      state.push_back(item);
+    }
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(video_streams_mutex_);
+    for (const auto & pair : dynamic_video_streams_) {
+      const auto & vs = pair.second;
+      json item;
+      item["id"] = vs->id;
+      item["type"] = "VideoStream";
+      item["topic"] = vs->topic;
+      item["area"] = json::array({vs->area.x, vs->area.y, vs->area.w, vs->area.h});
+      state.push_back(item);
+    }
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(marker_layers_mutex_);
+    for (const auto & pair : dynamic_marker_layers_) {
+      const auto & ml = pair.second;
+      json item;
+      item["id"] = ml->id;
+      item["type"] = "MarkerLayer";
+      item["topic"] = ml->topic;
+      item["area"] = json::array({ml->area.x, ml->area.y, ml->area.w, ml->area.h});
+      item["scale"] = ml->scale;
+      state.push_back(item);
+    }
+  }
+
+  if (events_changed_pub_) {
+    std_msgs::msg::String msg;
+    msg.data = state.dump();
+    events_changed_pub_->publish(msg);
   }
 }
 

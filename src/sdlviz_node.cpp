@@ -33,7 +33,8 @@ int main(int argc, char ** argv)
   // Use a background thread for ROS callbacks
   // SDL loop MUST be in the main thread for some platforms,
   // and it's cleaner to keep ROS in the background.
-  rclcpp::executors::MultiThreadedExecutor executor(rclcpp::ExecutorOptions(),
+  rclcpp::executors::MultiThreadedExecutor executor(
+    rclcpp::ExecutorOptions(),
     4);
   executor.add_node(node);
   std::thread ros_thread([&executor]() {executor.spin();});

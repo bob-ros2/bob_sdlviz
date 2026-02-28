@@ -74,6 +74,20 @@ public:
    */
   void draw(SDL_Renderer * renderer);
 
+  /**
+   * @brief Returns the current bounding area of the terminal.
+   * @return SDL_Rect
+   */
+  SDL_Rect get_area() const;
+
+  // Setters for dynamic updates
+  void set_area(SDL_Rect area);
+  void set_colors(SDL_Color text_color, SDL_Color bg_color);
+  void set_line_limit(size_t line_limit);
+  void set_wrap_width(size_t wrap_width);
+  void set_align(yTerminalAlign align);
+  void set_behavior(bool clear_on_new, bool append_newline);
+
 private:
   /**
    * @brief Helper to split a string into multiple lines based on wrap_width.

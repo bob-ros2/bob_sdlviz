@@ -240,13 +240,15 @@ private:
  */
 struct DynamicTerminal
 {
+  std::string id;                       ///< Unique identifier for this layer.
+  std::string topic;                    ///< Source ROS topic.
   std::unique_ptr<yTerminal> terminal;  ///< The terminal rendering logic.
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscriber;  ///< Subscription.
   rclcpp::Time creation_time;           ///< When the layer was created.
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
   DynamicTerminal()
-  : creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 };
 
 /**
@@ -255,6 +257,8 @@ struct DynamicTerminal
  */
 struct DynamicVideoStream
 {
+  std::string id;                      ///< Unique identifier for this layer.
+  std::string topic;                   ///< Source pipe path or topic.
   std::unique_ptr<FifoReader> reader;  ///< The FIFO reader instance.
   SDL_Texture * texture = nullptr;     ///< SDL texture for rendering.
   SDL_Rect area;                       ///< Screen area to render into.
@@ -264,7 +268,7 @@ struct DynamicVideoStream
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
   DynamicVideoStream()
-  : creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 
   ~DynamicVideoStream()
   {
@@ -280,6 +284,8 @@ struct DynamicVideoStream
  */
 struct DynamicMarkerLayer
 {
+  std::string id;        ///< Unique identifier for this layer.
+  std::string topic;     ///< Source ROS topic.
   SDL_Rect area;         ///< Screen area to render markers within.
   double scale;          ///< Scaling factor for marker coordinates.
   double offset_x;       ///< Horizontal offset.
@@ -293,7 +299,7 @@ struct DynamicMarkerLayer
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
   DynamicMarkerLayer()
-  : creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 };
 
 #endif  // BOB_SDLVIZ__TYPES_HPP_

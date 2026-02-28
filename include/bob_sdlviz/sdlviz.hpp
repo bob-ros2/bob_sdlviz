@@ -75,10 +75,16 @@ private:
    */
   void render_loop();
 
+  /**
+   * @brief Serializes the current state of all layers and publishes to events_changed.
+   */
+  void publish_current_state();
+
   // ROS 2 components
   rclcpp::CallbackGroup::SharedPtr reentrant_group_;      ///< Group for event callbacks.
   rclcpp::CallbackGroup::SharedPtr render_group_;         ///< Group for the main rendering loop.
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr event_subscriber_;  ///< Listener.
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr events_changed_pub_;   ///< State reporter.
 
   // Threading and Data
   std::mutex data_mutex_;                                 ///< Global data protection.
@@ -109,6 +115,7 @@ private:
 
   // Output
   std::unique_ptr<FifoStreamer> streamer_;                ///< Helper for FIFO frame output.
+  size_t next_id_num_ = 0;                                ///< Counter for automatic ID generation.
 };
 
 #endif  // BOB_SDLVIZ__SDLVIZ_HPP_
