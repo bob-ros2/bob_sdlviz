@@ -448,11 +448,12 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
 
       // Handle Add/Update
       if (type == "String") {
-        if (topic.empty() || !config.contains("area")) {
+        if (!config.contains("area")) {
           continue;
         }
         auto area_json = config["area"];
         SDL_Rect area = {area_json[0], area_json[1], area_json[2], area_json[3]};
+        std::string static_text = config.value("text", "");
 
         size_t line_limit = config.value("line_limit", 10);
         size_t wrap_width = config.value("wrap_width", 50);
@@ -490,6 +491,9 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           dt->terminal->set_behavior(clear_on_new, append_newline);
           dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
           dt->topic = topic;
+          if (!static_text.empty()) {
+            dt->terminal->append(static_text);
+          }
           RCLCPP_INFO(this->get_logger(), "Updated terminal: %s", id.c_str());
         } else {
           // Create new
@@ -502,18 +506,24 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           dt->creation_time = this->now();
           dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
 
-          RCLCPP_INFO(
-            this->get_logger(), "Created terminal: %s (Topic: %s)",
-            id.c_str(), topic.c_str());
+          if (!static_text.empty()) {
+            dt->terminal->append(static_text);
+          }
 
-          dt->subscriber = this->create_subscription<std_msgs::msg::String>(
-            topic, 10,
-            [this, id](const std_msgs::msg::String::SharedPtr sub_msg) {
-              std::lock_guard<std::mutex> lock(terminals_mutex_);
-              if (dynamic_terminals_.count(id)) {
-                dynamic_terminals_[id]->terminal->append(sub_msg->data);
-              }
-            });
+          RCLCPP_INFO(
+            this->get_logger(), "Created terminal: %s (Topic: %s, Static: %d)",
+            id.c_str(), topic.c_str(), !static_text.empty());
+
+          if (!topic.empty()) {
+            dt->subscriber = this->create_subscription<std_msgs::msg::String>(
+              topic, 10,
+              [this, id](const std_msgs::msg::String::SharedPtr sub_msg) {
+                std::lock_guard<std::mutex> lock(terminals_mutex_);
+                if (dynamic_terminals_.count(id)) {
+                  dynamic_terminals_[id]->terminal->append(sub_msg->data);
+                }
+              });
+          }
           dynamic_terminals_[id] = std::move(dt);
         }
         changed = true;
@@ -663,6 +673,7 @@ void SdlVizNode::publish_current_state()
       item["area"] = json::array(
         {dt->terminal->get_area().x, dt->terminal->get_area().y,
           dt->terminal->get_area().w, dt->terminal->get_area().h});
+      item["expire"] = dt->lifetime.seconds();
       state.push_back(item);
     }
   }
@@ -676,6 +687,7 @@ void SdlVizNode::publish_current_state()
       item["type"] = "VideoStream";
       item["topic"] = vs->topic;
       item["area"] = json::array({vs->area.x, vs->area.y, vs->area.w, vs->area.h});
+      item["expire"] = vs->lifetime.seconds();
       state.push_back(item);
     }
   }
@@ -690,6 +702,7 @@ void SdlVizNode::publish_current_state()
       item["topic"] = ml->topic;
       item["area"] = json::array({ml->area.x, ml->area.y, ml->area.w, ml->area.h});
       item["scale"] = ml->scale;
+      item["expire"] = ml->lifetime.seconds();
       state.push_back(item);
     }
   }
