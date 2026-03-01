@@ -27,6 +27,8 @@ jobs:
             libsdl2-ttf-dev \
             nlohmann-json3-dev \
             ros-humble-visualization-msgs \
+            ros-humble-cv-bridge \
+            ros-humble-sensor_msgs \
             ros-humble-ament-lint-auto \
             ros-humble-ament-lint-common \
             ros-humble-ament-cmake-cppcheck \

@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     alsa-utils \
     ros-humble-visualization-msgs \
+    ros-humble-cv-bridge \
+    ros-humble-sensor-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and set the working directory for the ROS workspace
