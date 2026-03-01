@@ -107,7 +107,7 @@ Many parameters can be mapped from environment variables for easier Docker integ
 - **Dynamic Topics**: Subscribes to topics defined in the JSON configuration (e.g., marker topics or text strings).
 
 #### Published
-- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of all layers as a JSON array whenever a change occurs.
+- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of **all layers** as a JSON array whenever a change occurs (add/remove/update/expire). Useful for UI synchronization or external dashboards.
 
 ---
 
@@ -124,10 +124,38 @@ Every layer can have an optional `id` field.
 - **`add` (default)**: Creates a new layer or updates an existing one if the `id` already exists.
 - **`remove`**: Deletes the layer with the specified `id`.
 
-### Layer Types
-- **`String`**: Creates a text terminal area.
-- **`MarkerLayer`**: Creates a localized 2D marker rendering layer.
-- **`VideoStream`**: Creates an area that reads raw frames from a FIFO.
+### Layer Types & Parameters
+
+All layer types support the following common fields:
+- `id` (string, optional): Unique ID. Auto-generated if omitted.
+- `action` (string, optional): `add` (default) or `remove`.
+- `expire` (float, optional): Auto-remove the layer after $N$ seconds. Set to `0` or omit for infinite lifetime.
+
+#### 1. `String` (Text Terminal)
+Renders a rolling text terminal.
+- `topic` (string): ROS topic for incoming strings.
+- `area` (array): `[x, y, width, height]`.
+- `text_color`: `[R, G, B, A]` (Default: `[200, 200, 200, 255]`).
+- `bg_color`: `[R, G, B, A]` (Default: `[30, 30, 30, 180]`).
+- `align` (string): `left` (default), `center`, or `right`.
+- `line_limit` (int): Max number of lines to keep in history.
+- `wrap_width` (int): Number of characters before wrapping.
+- `clear_on_new` (bool): Clear terminal when a new message arrives.
+- `append_newline` (bool): Automatically add `\n` to messages.
+
+#### 2. `VideoStream` (FIFO Input)
+Displays raw video buffers from a pipe.
+- `topic`: Path to the FIFO pipe (e.g., `/tmp/overlay_video`).
+- `area`: `[x, y, width, height]` on screen.
+- `source_width` / `source_height`: Dimensions of the raw input frames (Default: `640x480`).
+
+#### 3. `MarkerLayer` (2D Projection)
+Projects 3D ROS markers onto a 2D plane.
+- `topic`: ROS topic for `visualization_msgs/MarkerArray`.
+- `area`: `[x, y, width, height]` (drawing bounds).
+- `scale` (float): Mapping of ROS meters to pixels (Default: `1000.0`).
+- `offset_x` / `offset_y`: Fine-tuning of the projection center.
+- `exclude_ns` (string): Comma-separated list of marker namespaces to hide.
 
 ### Video Stream Integration
 
@@ -193,7 +221,23 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
 
 ### Example JSON
 
-**Add/Update a Terminal and Marker Layer:**
+**Add a Terminal with Auto-Expiration:**
+```json
+[
+  {
+    "id": "alert",
+    "type": "String",
+    "topic": "/bob/alerts",
+    "area": [227, 20, 400, 100],
+    "text_color": [255, 50, 50, 255],
+    "bg_color": [0, 0, 0, 200],
+    "align": "center",
+    "expire": 5.0
+  }
+]
+```
+
+**Add/Update a persistent Scene:**
 ```json
 [
   {
@@ -202,7 +246,9 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
     "topic": "/bob/log",
     "area": [10, 10, 400, 200],
     "text_color": [255, 255, 255, 255],
-    "bg_color": [0, 0, 0, 150]
+    "bg_color": [0, 0, 0, 150],
+    "line_limit": 20,
+    "wrap_width": 60
   },
   {
     "id": "scene_markers",
@@ -210,7 +256,7 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
     "topic": "/bob/markers",
     "area": [420, 10, 400, 400],
     "scale": 1500.0,
-    "exclude_ns": "background"
+    "exclude_ns": "env,background"
   }
 ]
 ```
