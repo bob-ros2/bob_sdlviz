@@ -107,7 +107,7 @@ Many parameters can be mapped from environment variables for easier Docker integ
 - **Dynamic Topics**: Subscribes to topics defined in the JSON configuration (e.g., marker topics or text strings).
 
 #### Published
-- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of **all layers** as a JSON array whenever a change occurs (add/remove/update/expire). Useful for UI synchronization or external dashboards.
+- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of **all layers** as a JSON array whenever a change occurs (add, remove, update, or **automatic expiration**). Useful for UI synchronization or external dashboards.
 
 ---
 

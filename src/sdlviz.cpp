@@ -780,6 +780,8 @@ void SdlVizNode::render_loop()
     }
   }
 
+  bool changed = false;
+
   SDL_SetRenderDrawColor(renderer_, 0x1E, 0x1E, 0x1E, 0xFF);
   SDL_RenderClear(renderer_);
 
@@ -795,6 +797,7 @@ void SdlVizNode::render_loop()
           this->get_logger(), "Removing expired video stream on pipe: %s",
           it->first.c_str());
         it = dynamic_video_streams_.erase(it);
+        changed = true;
         continue;
       }
 
@@ -833,6 +836,7 @@ void SdlVizNode::render_loop()
           this->get_logger(), "Removing expired marker layer on topic: %s",
           it->first.c_str());
         it = dynamic_marker_layers_.erase(it);
+        changed = true;
         continue;
       }
 
@@ -947,9 +951,16 @@ void SdlVizNode::render_loop()
       }
     }
 
-    for (const auto & topic : expired_terminals) {
-      dynamic_terminals_.erase(topic);
+    if (!expired_terminals.empty()) {
+      for (const auto & topic : expired_terminals) {
+        dynamic_terminals_.erase(topic);
+      }
+      changed = true;
     }
+  }
+
+  if (changed) {
+    publish_current_state();
   }
 
   SDL_RenderPresent(renderer_);

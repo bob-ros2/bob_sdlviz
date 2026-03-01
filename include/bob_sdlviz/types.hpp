@@ -249,7 +249,7 @@ struct DynamicTerminal
 
   std::string title;                    ///< Optional title for the layer.
   DynamicTerminal()
-  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0), title("") {}
 };
 
 /**
@@ -270,7 +270,7 @@ struct DynamicVideoStream
 
   std::string title;                   ///< Optional title for the layer.
   DynamicVideoStream()
-  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0), title("") {}
 
   ~DynamicVideoStream()
   {
@@ -302,7 +302,7 @@ struct DynamicMarkerLayer
 
   std::string title;     ///< Optional title for the layer.
   DynamicMarkerLayer()
-  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0), title("") {}
 };
 
 #endif  // BOB_SDLVIZ__TYPES_HPP_
