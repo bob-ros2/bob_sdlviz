@@ -129,11 +129,13 @@ Every layer can have an optional `id` field.
 All layer types support the following common fields:
 - `id` (string, optional): Unique ID. Auto-generated if omitted.
 - `action` (string, optional): `add` (default) or `remove`.
+- `title` (string, optional): Display a title bar above the layer content.
 - `expire` (float, optional): Auto-remove the layer after $N$ seconds. Set to `0` or omit for infinite lifetime.
 
 #### 1. `String` (Text Terminal)
 Renders a rolling text terminal.
-- `topic` (string): ROS topic for incoming strings.
+- `topic` (string, optional): ROS topic for incoming strings.
+- `text` (string, optional): Static text to display immediately (useful for one-off alerts).
 - `area` (array): `[x, y, width, height]`.
 - `text_color`: `[R, G, B, A]` (Default: `[200, 200, 200, 255]`).
 - `bg_color`: `[R, G, B, A]` (Default: `[30, 30, 30, 180]`).
@@ -221,18 +223,19 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
 
 ### Example JSON
 
-**Add a Terminal with Auto-Expiration:**
+**Add a Terminal with Title and Static Text:**
 ```json
 [
   {
     "id": "alert",
     "type": "String",
-    "topic": "/bob/alerts",
-    "area": [227, 20, 400, 100],
+    "title": "⚠ CRITICAL ALERT",
+    "text": "Engine temperature critical!",
+    "area": [227, 20, 400, 120],
     "text_color": [255, 50, 50, 255],
     "bg_color": [0, 0, 0, 200],
     "align": "center",
-    "expire": 5.0
+    "expire": 10.0
   }
 ]
 ```

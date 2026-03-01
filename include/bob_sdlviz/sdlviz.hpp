@@ -80,6 +80,13 @@ private:
    */
   void publish_current_state();
 
+  /**
+   * @brief Helper to draw a title bar for a layer.
+   */
+  void draw_title_bar(
+    SDL_Renderer * renderer, TTF_Font * font, const std::string & title,
+    const SDL_Rect & area);
+
   // ROS 2 components
   rclcpp::CallbackGroup::SharedPtr reentrant_group_;      ///< Group for event callbacks.
   rclcpp::CallbackGroup::SharedPtr render_group_;         ///< Group for the main rendering loop.

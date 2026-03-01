@@ -247,8 +247,9 @@ struct DynamicTerminal
   rclcpp::Time creation_time;           ///< When the layer was created.
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
+  std::string title;                    ///< Optional title for the layer.
   DynamicTerminal()
-  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 };
 
 /**
@@ -267,8 +268,9 @@ struct DynamicVideoStream
   rclcpp::Time creation_time;           ///< When the layer was created.
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
+  std::string title;                   ///< Optional title for the layer.
   DynamicVideoStream()
-  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 
   ~DynamicVideoStream()
   {
@@ -298,8 +300,9 @@ struct DynamicMarkerLayer
   rclcpp::Time creation_time;           ///< When the layer was created.
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
+  std::string title;     ///< Optional title for the layer.
   DynamicMarkerLayer()
-  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
+  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0) {}
 };
 
 #endif  // BOB_SDLVIZ__TYPES_HPP_

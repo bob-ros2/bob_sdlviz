@@ -453,6 +453,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
         }
         auto area_json = config["area"];
         SDL_Rect area = {area_json[0], area_json[1], area_json[2], area_json[3]};
+        std::string title = config.value("title", "");
         std::string static_text = config.value("text", "");
 
         size_t line_limit = config.value("line_limit", 10);
@@ -491,6 +492,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           dt->terminal->set_behavior(clear_on_new, append_newline);
           dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
           dt->topic = topic;
+          dt->title = title;
           if (!static_text.empty()) {
             dt->terminal->append(static_text);
           }
@@ -500,6 +502,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           auto dt = std::make_unique<DynamicTerminal>();
           dt->id = id;
           dt->topic = topic;
+          dt->title = title;
           dt->terminal = std::make_unique<yTerminal>(
             font_, line_limit, wrap_width, area, text_color, bg_color, align,
             clear_on_new, append_newline);
@@ -540,12 +543,14 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           auto & vs = dynamic_video_streams_[id];
           vs->area = area;
           vs->topic = topic;
+          vs->title = config.value("title", "");
           vs->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
           RCLCPP_INFO(this->get_logger(), "Updated video stream: %s", id.c_str());
         } else {
           auto vs = std::make_unique<DynamicVideoStream>();
           vs->id = id;
           vs->topic = topic;
+          vs->title = config.value("title", "");
           vs->area = area;
           vs->source_width = config.value("source_width", 640);
           vs->source_height = config.value("source_height", 480);
@@ -582,6 +587,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           auto & ml = dynamic_marker_layers_[id];
           ml->area = area;
           ml->topic = topic;
+          ml->title = config.value("title", "");
           ml->scale = config.value("scale", ml->scale);
           ml->offset_x = config.value("offset_x", ml->offset_x);
           ml->offset_y = config.value("offset_y", ml->offset_y);
@@ -591,6 +597,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           auto ml = std::make_unique<DynamicMarkerLayer>();
           ml->id = id;
           ml->topic = topic;
+          ml->title = config.value("title", "");
           ml->area = area;
           ml->scale = config.value("scale", 1000.0);
           ml->offset_x = config.value("offset_x", 0.0);
@@ -655,6 +662,42 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
 }
 
 /**
+ * @brief Helper to draw a title bar for a layer.
+ */
+void SdlVizNode::draw_title_bar(
+  SDL_Renderer * renderer, TTF_Font * font, const std::string & title,
+  const SDL_Rect & area)
+{
+  if (title.empty()) {return;}
+
+  int title_h = TTF_FontHeight(font) + 2;
+  SDL_Rect title_bg = {area.x, area.y, area.w, title_h};
+
+  // Semi-transparent dark background for title
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180);
+  SDL_RenderFillRect(renderer, &title_bg);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+  // Render title text
+  SDL_Color white = {255, 255, 255, 255};
+  SDL_Surface * surface = TTF_RenderUTF8_Blended(font, title.c_str(), white);
+  if (surface) {
+    SDL_Texture * texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (texture) {
+      // 1px Y offset as requested
+      SDL_Rect dst = {area.x + 5, area.y + 1, surface->w, surface->h};
+      if (dst.w > area.w - 10) {
+        dst.w = area.w - 10;
+      }  // Ellipsis would be better but let's keep it simple
+      SDL_RenderCopy(renderer, texture, NULL, &dst);
+      SDL_DestroyTexture(texture);
+    }
+    SDL_FreeSurface(surface);
+  }
+}
+
+/**
  * @brief Serializes the current state of all layers and publishes to events_changed.
  */
 void SdlVizNode::publish_current_state()
@@ -670,6 +713,7 @@ void SdlVizNode::publish_current_state()
       item["id"] = dt->id;
       item["type"] = "String";
       item["topic"] = dt->topic;
+      item["title"] = dt->title;
       item["area"] = json::array(
         {dt->terminal->get_area().x, dt->terminal->get_area().y,
           dt->terminal->get_area().w, dt->terminal->get_area().h});
@@ -686,6 +730,7 @@ void SdlVizNode::publish_current_state()
       item["id"] = vs->id;
       item["type"] = "VideoStream";
       item["topic"] = vs->topic;
+      item["title"] = vs->title;
       item["area"] = json::array({vs->area.x, vs->area.y, vs->area.w, vs->area.h});
       item["expire"] = vs->lifetime.seconds();
       state.push_back(item);
@@ -700,6 +745,7 @@ void SdlVizNode::publish_current_state()
       item["id"] = ml->id;
       item["type"] = "MarkerLayer";
       item["topic"] = ml->topic;
+      item["title"] = ml->title;
       item["area"] = json::array({ml->area.x, ml->area.y, ml->area.w, ml->area.h});
       item["scale"] = ml->scale;
       item["expire"] = ml->lifetime.seconds();
@@ -752,6 +798,14 @@ void SdlVizNode::render_loop()
         continue;
       }
 
+      SDL_Rect content_area = vs->area;
+      if (!vs->title.empty()) {
+        draw_title_bar(renderer_, font_, vs->title, vs->area);
+        int title_h = TTF_FontHeight(font_) + 2;
+        content_area.y += title_h;
+        content_area.h -= title_h;
+      }
+
       if (vs->reader->get_latest_frame(video_frame_buffer_)) {
         if (vs->texture) {
           SDL_UpdateTexture(
@@ -760,7 +814,7 @@ void SdlVizNode::render_loop()
         }
       }
       if (vs->texture) {
-        SDL_RenderCopy(renderer_, vs->texture, NULL, &vs->area);
+        SDL_RenderCopy(renderer_, vs->texture, NULL, &content_area);
       }
       ++it;
     }
@@ -803,6 +857,14 @@ void SdlVizNode::render_loop()
             marker.color.g * 255, marker.color.b * 255,
             255);
 
+          SDL_Rect content_area = layer->area;
+          if (!layer->title.empty()) {
+            draw_title_bar(renderer_, font_, layer->title, layer->area);
+            int title_h = TTF_FontHeight(font_) + 2;
+            content_area.y += title_h;
+            content_area.h -= title_h;
+          }
+
           switch (marker.type) {
             case visualization_msgs::msg::Marker::LINE_STRIP: {
                 if (marker.points.size() < 2) {
@@ -812,16 +874,16 @@ void SdlVizNode::render_loop()
                   const auto & p1 = marker.points[i];
                   const auto & p2 = marker.points[i + 1];
 
-                  int x1 = layer->area.x + layer->area.w / 2 +
+                  int x1 = content_area.x + content_area.w / 2 +
                     (marker.pose.position.y + p1.y) * layer->scale +
                     layer->offset_x;
-                  int y1 = layer->area.y + layer->area.h / 2 -
+                  int y1 = content_area.y + content_area.h / 2 -
                     (marker.pose.position.z + p1.z) * layer->scale +
                     layer->offset_y;
-                  int x2 = layer->area.x + layer->area.w / 2 +
+                  int x2 = content_area.x + content_area.w / 2 +
                     (marker.pose.position.y + p2.y) * layer->scale +
                     layer->offset_x;
-                  int y2 = layer->area.y + layer->area.h / 2 -
+                  int y2 = content_area.y + content_area.h / 2 -
                     (marker.pose.position.z + p2.z) * layer->scale +
                     layer->offset_y;
 
@@ -831,9 +893,9 @@ void SdlVizNode::render_loop()
 
             case visualization_msgs::msg::Marker::SPHERE:
             case visualization_msgs::msg::Marker::CYLINDER: {
-                int cx = layer->area.x + layer->area.w / 2 +
+                int cx = content_area.x + content_area.w / 2 +
                   marker.pose.position.y * layer->scale + layer->offset_x;
-                int cy = layer->area.y + layer->area.h / 2 -
+                int cy = content_area.y + content_area.h / 2 -
                   marker.pose.position.z * layer->scale + layer->offset_y;
                 int radius = (marker.scale.y * layer->scale) / 2;
 
@@ -868,7 +930,20 @@ void SdlVizNode::render_loop()
           topic.c_str());
         expired_terminals.push_back(topic);
       } else {
-        dt->terminal->draw(renderer_);
+        if (!dt->title.empty()) {
+          draw_title_bar(renderer_, font_, dt->title, dt->terminal->get_area());
+          int title_h = TTF_FontHeight(font_) + 2;
+          SDL_Rect original_area = dt->terminal->get_area();
+          SDL_Rect content_area = original_area;
+          content_area.y += title_h;
+          content_area.h -= title_h;
+
+          dt->terminal->set_area(content_area);
+          dt->terminal->draw(renderer_);
+          dt->terminal->set_area(original_area);
+        } else {
+          dt->terminal->draw(renderer_);
+        }
       }
     }
 
