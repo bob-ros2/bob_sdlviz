@@ -145,7 +145,16 @@ Renders a rolling text terminal.
 - `clear_on_new` (bool): Clear terminal when a new message arrives.
 - `append_newline` (bool): Automatically add `\n` to messages.
 
-#### 2. `VideoStream` (FIFO Input)
+#### 2. `Image`
+Renders a `sensor_msgs/msg/Image`.
+- `topic` (string): ROS topic for incoming images.
+- `area` (array, optional): `[x, y, width, height]`.
+  - If omitted: Pos `[0, 0]`, size is original image dimensions.
+  - If `width > 0` and `height == 0`: Height is calculated proportionally.
+  - If `width == 0` and `height > 0`: Width is calculated proportionally.
+  - If both specified: Image is stretched/shrunk to fit.
+
+#### 3. `VideoStream` (FIFO Input)
 Displays raw video buffers from a pipe.
 - `topic`: Path to the FIFO pipe (e.g., `/tmp/overlay_video`).
 - `area`: `[x, y, width, height]` on screen.
@@ -222,6 +231,20 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
 > `sdlviz` expects exactly **4 bytes per pixel (BGRA)**. Using 3-byte formats (like RGB or BGR) will result in distorted images.
 
 ### Example JSON
+
+**Add an Image Layer with Proportional Scaling:**
+```json
+[
+  {
+    "id": "cam_view",
+    "type": "Image",
+    "topic": "/camera/image_raw",
+    "area": [20, 20, 320, 0],
+    "title": "USB Cam",
+    "expire": 0.0
+  }
+]
+```
 
 **Add a Terminal with Title and Static Text:**
 ```json

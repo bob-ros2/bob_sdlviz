@@ -1,0 +1,15 @@
+[
+    {
+        "id": "test_image",
+        "type": "Image",
+        "topic": "/test/image",
+        "area": [
+            50,
+            50,
+            300,
+            0
+        ],
+        "title": "Test Image Layer",
+        "expire": 60.0
+    }
+]

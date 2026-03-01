@@ -646,6 +646,40 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           dynamic_marker_layers_[id] = std::move(ml);
         }
         changed = true;
+      } else if (type == "Image") {
+        std::lock_guard<std::mutex> lock(image_layers_mutex_);
+        if (dynamic_image_layers_.count(id)) {
+          auto & layer = dynamic_image_layers_[id];
+          if (config.contains("area")) {
+            auto a = config["area"];
+            layer->area = {a[0], a[1], a[2], a[3]};
+          }
+          layer->topic = topic;
+          layer->title = config.value("title", "");
+          layer->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+        } else {
+          auto layer = std::make_unique<DynamicImageLayer>();
+          layer->id = id;
+          layer->topic = topic;
+          layer->title = config.value("title", "");
+          if (config.contains("area")) {
+            auto a = config["area"];
+            layer->area = {a[0], a[1], a[2], a[3]};
+          } else {
+            layer->area = {0, 0, 0, 0};
+          }
+          layer->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+          layer->creation_time = this->now();
+
+          layer->subscription = this->create_subscription<sensor_msgs::msg::Image>(
+            topic, 10,
+            [this, id](const sensor_msgs::msg::Image::SharedPtr msg) {
+              this->image_callback(id, msg);
+            });
+
+          dynamic_image_layers_[id] = std::move(layer);
+        }
+        changed = true;
       }
     }
 
@@ -658,6 +692,21 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
       e.what());
   } catch (...) {
     RCLCPP_ERROR(this->get_logger(), "Unknown error parsing dynamic config JSON.");
+  }
+}
+
+/**
+ * @brief Callback for incoming sensor_msgs/Image.
+ */
+void SdlVizNode::image_callback(
+  const std::string & id,
+  const sensor_msgs::msg::Image::SharedPtr msg)
+{
+  std::lock_guard<std::mutex> lock(image_layers_mutex_);
+  if (dynamic_image_layers_.count(id)) {
+    auto & layer = dynamic_image_layers_[id];
+    std::lock_guard<std::mutex> data_lock(layer->data_mutex);
+    layer->last_image = msg;
   }
 }
 
@@ -753,6 +802,20 @@ void SdlVizNode::publish_current_state()
     }
   }
 
+  {
+    std::lock_guard<std::mutex> lock(image_layers_mutex_);
+    for (auto const &[id, layer] : dynamic_image_layers_) {
+      json item;
+      item["id"] = id;
+      item["type"] = "Image";
+      item["topic"] = layer->topic;
+      item["area"] = {layer->area.x, layer->area.y, layer->area.w, layer->area.h};
+      item["title"] = layer->title;
+      item["expire"] = layer->lifetime.seconds();
+      state.push_back(item);
+    }
+  }
+
   if (events_changed_pub_) {
     std_msgs::msg::String msg;
     msg.data = state.dump();
@@ -784,6 +847,80 @@ void SdlVizNode::render_loop()
 
   SDL_SetRenderDrawColor(renderer_, 0x1E, 0x1E, 0x1E, 0xFF);
   SDL_RenderClear(renderer_);
+
+  {
+    std::lock_guard<std::mutex> lock(image_layers_mutex_);
+    auto it = dynamic_image_layers_.begin();
+    while (it != dynamic_image_layers_.end()) {
+      auto & layer = it->second;
+      if (layer->lifetime.nanoseconds() > 0 &&
+        (this->now() - layer->creation_time) > layer->lifetime)
+      {
+        RCLCPP_INFO(
+          this->get_logger(), "Removing expired image layer: %s",
+          it->first.c_str());
+        it = dynamic_image_layers_.erase(it);
+        changed = true;
+        continue;
+      }
+
+      sensor_msgs::msg::Image::SharedPtr img;
+      {
+        std::lock_guard<std::mutex> data_lock(layer->data_mutex);
+        img = layer->last_image;
+      }
+
+      if (img) {
+        try {
+          // Convert ROS image to BGR or BGRA for SDL
+          cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img, "bgra8");
+          if (cv_ptr) {
+            int img_w = cv_ptr->image.cols;
+            int img_h = cv_ptr->image.rows;
+
+            if (!layer->texture || layer->last_w != img_w || layer->last_h != img_h) {
+              if (layer->texture) {SDL_DestroyTexture(layer->texture);}
+              layer->texture = SDL_CreateTexture(
+                renderer_, SDL_PIXELFORMAT_ARGB8888,
+                SDL_TEXTUREACCESS_STREAMING, img_w, img_h);
+              layer->last_w = img_w;
+              layer->last_h = img_h;
+            }
+
+            if (layer->texture) {
+              SDL_UpdateTexture(
+                layer->texture, NULL, cv_ptr->image.data,
+                img_w * 4);
+
+              SDL_Rect dst = layer->area;
+              // Smart scaling logic
+              if (dst.w == 0 && dst.h == 0) {
+                dst.w = img_w;
+                dst.h = img_h;
+              } else if (dst.w > 0 && dst.h == 0) {
+                dst.h = static_cast<int>(dst.w * (static_cast<float>(img_h) / img_w));
+              } else if (dst.w == 0 && dst.h > 0) {
+                dst.w = static_cast<int>(dst.h * (static_cast<float>(img_w) / img_h));
+              }
+
+              SDL_Rect content_area = dst;
+              if (!layer->title.empty()) {
+                draw_title_bar(renderer_, font_, layer->title, dst);
+                int title_h = TTF_FontHeight(font_) + 2;
+                content_area.y += title_h;
+                content_area.h -= title_h;
+              }
+
+              SDL_RenderCopy(renderer_, layer->texture, NULL, &content_area);
+            }
+          }
+        } catch (const cv_bridge::Exception & e) {
+          RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
+        }
+      }
+      ++it;
+    }
+  }
 
   {
     std::lock_guard<std::mutex> lock(video_streams_mutex_);

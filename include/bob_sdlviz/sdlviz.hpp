@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include "cv_bridge/cv_bridge.h"
+#include "sensor_msgs/msg/image.hpp"
 #include "bob_sdlviz/terminal.hpp"
 #include "bob_sdlviz/types.hpp"
 
@@ -69,6 +71,13 @@ private:
    * @param json_data The raw JSON string.
    */
   void process_terminal_config(const std::string & json_data);
+
+  /**
+   * @brief Callback for incoming sensor_msgs/Image.
+   * @param id The layer ID.
+   * @param msg The image message.
+   */
+  void image_callback(const std::string & id, const sensor_msgs::msg::Image::SharedPtr msg);
 
   /**
    * @brief Internal rendering loop called by run(). Distributes draw calls to layers.
@@ -119,6 +128,9 @@ private:
   dynamic_video_streams_;                                 ///< Map of video overlays.
   std::mutex video_streams_mutex_;                        ///< Protects video streams.
   std::vector<uint8_t> video_frame_buffer_;               ///< Buffer for frame acquisition.
+
+  std::map<std::string, std::unique_ptr<DynamicImageLayer>> dynamic_image_layers_;
+  std::mutex image_layers_mutex_;
 
   // Output
   std::unique_ptr<FifoStreamer> streamer_;                ///< Helper for FIFO frame output.

@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/image.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
@@ -303,6 +304,41 @@ struct DynamicMarkerLayer
   std::string title;     ///< Optional title for the layer.
   DynamicMarkerLayer()
   : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0), title("") {}
+};
+
+/**
+ * @struct DynamicImageLayer
+ * @brief Represents a layer for displaying a ROS sensor_msgs/Image.
+ */
+struct DynamicImageLayer
+{
+  std::string id;
+  std::string topic;
+  std::string title;
+  SDL_Rect area;                      ///< Target area. w or h can be 0 for proportional scaling.
+  SDL_Texture * texture = nullptr;
+  int last_w = 0;
+  int last_h = 0;
+
+  std::shared_ptr<rclcpp::Subscription<sensor_msgs::msg::Image>> subscription;
+  sensor_msgs::msg::Image::SharedPtr last_image;
+  std::mutex data_mutex;
+
+  rclcpp::Time creation_time;
+  rclcpp::Duration lifetime;
+
+  DynamicImageLayer()
+  : id(""), topic(""), title(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0)
+  {
+    area = {0, 0, 0, 0};
+  }
+
+  ~DynamicImageLayer()
+  {
+    if (texture) {
+      SDL_DestroyTexture(texture);
+    }
+  }
 };
 
 #endif  // BOB_SDLVIZ__TYPES_HPP_

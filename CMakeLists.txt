@@ -9,6 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
 find_package(visualization_msgs REQUIRED)
 # Use pkg-config to find system libraries like SDL2. This is the most reliable method.
 find_package(PkgConfig REQUIRED)
@@ -30,6 +32,8 @@ target_include_directories(sdlviz PUBLIC
 ament_target_dependencies(sdlviz
   rclcpp
   std_msgs
+  sensor_msgs
+  cv_bridge
   visualization_msgs
 )
 
