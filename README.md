@@ -1,4 +1,4 @@
-# bob_sdlviz
+# ROS Package [bob_sdlviz](https://github.com/bob-ros2/bob_sdlviz)
 
 [![CI – Build & Test](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/ci.yml)
 [![Docker – GHCR](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml)
