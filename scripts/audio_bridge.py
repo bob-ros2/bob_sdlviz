@@ -47,11 +47,11 @@ class AudioMixer(Node):
 
         self.sub = self.create_subscription(
             Int16MultiArray,
-            '/bob/audio_raw',
+            'audio_raw',
             self.audio_callback,
             10
         )
-        self.get_logger().info(f"Audio Bridge initialized. Subscribed to 'audio_raw'.")
+        self.get_logger().info("Audio Bridge initialized. Subscribed to 'audio_raw'.")
 
     def audio_callback(self, msg):
         """Handle incoming raw audio (expected Int16, 44100Hz)."""
