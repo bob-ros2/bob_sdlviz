@@ -86,13 +86,7 @@ ros2 run bob_sdlviz sdlviz "$@" &
 
 NODE_PID=$!
 
-# --- Audio Bridge (Mandatory for non-blocking FIFO audio) ---
 ENABLE_AUDIO="${ENABLE_AUDIO:-false}"
-if [[ "$ENABLE_AUDIO" == "fifo" ]]; then
-    echo "Starting audio bridge (Non-blocking)..."
-    python3 "$SCRIPT_DIR/audio_bridge.py" &
-    BRIDGE_PID=$!
-fi
 
 sleep 2
 
