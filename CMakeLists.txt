@@ -50,7 +50,6 @@ install(TARGETS
 )
 
 install(PROGRAMS
-  scripts/audio_bridge.py
   scripts/feed_audio.sh
   scripts/start_stream.sh
   DESTINATION lib/${PROJECT_NAME}
