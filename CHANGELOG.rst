@@ -8,6 +8,7 @@ Changelog for package bob_sdlviz
 * Fixed events_changed update upon layer expiration.
 * Resolved -Wreorder compiler warnings.
 * Added optional title bars, expire parameter, and static text support for dynamic layers.
+* Removed deprecated audio_bridge.py (integrated into bob_audio pipeline).
 * Contributors: Bob Ros
 
 0.0.1 (2026-02-11)
