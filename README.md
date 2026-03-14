@@ -1,7 +1,8 @@
 # ROS Package [bob_sdlviz](https://github.com/bob-ros2/bob_sdlviz)
 
 [![CI – Build & Test](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/ci.yml)
-[![Docker – GHCR](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml)
+[![Docker – Build & Push](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_sdlviz/actions/workflows/docker.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A high-performance ROS 2 visualization node based on SDL2. Designed for flexible, headless streaming of markers, video frames, and dynamic text overlays to platforms like Twitch.
 
