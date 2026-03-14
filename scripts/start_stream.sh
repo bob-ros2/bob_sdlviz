@@ -105,7 +105,7 @@ do
     if [[ "$ENABLE_AUDIO" == "pulse" || "$ENABLE_AUDIO" == "true" ]]; then
         AUDIO_ARGS=(-f pulse -i default -c:a aac -b:a 128k -ar 44100)
     elif [[ "$ENABLE_AUDIO" == "fifo" ]]; then
-        # Use the master pipe (fed by audio_bridge.py)
+        # Use the master pipe (fed by bob_audio mixer)
         AUDIO_ARGS=(-f s16le -ar 44100 -ac 2 -i "$SDLVIZ_AUDIO_MASTER_PATH" -c:a aac -b:a 128k)
     else
         # Default or "false"
