@@ -96,7 +96,7 @@ Many parameters can be mapped from environment variables for easier Docker integ
 | `stream_output` | `bool` | Enable writing frames to a FIFO pipe. (Env: `SDLVIZ_STREAM_OUTPUT`) |
 | `stream_path` | `string` | Path to the output FIFO pipe for streaming. (Env: `SDLVIZ_STREAM_PATH`) |
 | `config_file_path`| `string` | Path to a JSON file for initial layout. (Env: `SDLVIZ_CONFIG_PATH`) |
-| `font_path` | `string` | Path to the TTF font file. (Env: `SDLVIZ_FONT_PATH`) |
+| `font_path` | `string` | Comma or space separated list of paths to TTF font files. (Env: `SDLVIZ_FONT_PATH`) |
 | `font_size` | `int` | Base font size for terminals. (Env: `SDLVIZ_FONT_SIZE`) |
 | `fps` | `double` | Target rendering and streaming FPS. (Env: `SDLVIZ_FPS`) |
 
@@ -144,6 +144,8 @@ Renders a rolling text terminal.
 - `wrap_width` (int): Number of characters before wrapping.
 - `clear_on_new` (bool): Clear terminal when a new message arrives.
 - `append_newline` (bool): Automatically add `\n` to messages.
+- `ttf` (int, optional): Index of the font to use from the `font_path` list (Default: `0`).
+- `font_size` (int, optional): Individual font size for this terminal. Defaults to the global `font_size` parameter.
 
 #### 2. `Image`
 Renders a `sensor_msgs/msg/Image`.

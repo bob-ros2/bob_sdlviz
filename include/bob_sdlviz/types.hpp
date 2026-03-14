@@ -249,8 +249,11 @@ struct DynamicTerminal
   rclcpp::Duration lifetime;            ///< Expiration duration (0 = infinite).
 
   std::string title;                    ///< Optional title for the layer.
+  int ttf_index;                        ///< Index of the font to use.
+  int font_size;                        ///< Font size in pixels.
   DynamicTerminal()
-  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0), title("") {}
+  : id(""), topic(""), creation_time(0, 0, RCL_ROS_TIME), lifetime(0, 0), title(""), ttf_index(0),
+    font_size(16) {}
 };
 
 /**

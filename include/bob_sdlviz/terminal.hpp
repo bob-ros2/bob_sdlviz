@@ -58,7 +58,7 @@ public:
    * @param append_newline Whether to automatically append a newline to inputs.
    */
   yTerminal(
-    TTF_Font * font, size_t line_limit, size_t wrap_width, SDL_Rect area,
+    TTF_Font * font, int font_size, size_t line_limit, size_t wrap_width, SDL_Rect area,
     SDL_Color text_color, SDL_Color bg_color, yTerminalAlign align,
     bool clear_on_new, bool append_newline);
 
@@ -87,6 +87,8 @@ public:
   void set_wrap_width(size_t wrap_width);
   void set_align(yTerminalAlign align);
   void set_behavior(bool clear_on_new, bool append_newline);
+  void set_font(TTF_Font * font);
+  void set_font_size(int size);
 
 private:
   /**
@@ -107,6 +109,7 @@ private:
     TTF_Font * font);
 
   TTF_Font * font_;         ///< Pointer to the TTF font surface.
+  int font_size_;           ///< Font size in pixels.
   size_t line_limit_;       ///< Maximum lines kept in history.
   size_t wrap_width_;       ///< Width for automatic word wrapping.
   SDL_Rect area_;           ///< UI bounding box.

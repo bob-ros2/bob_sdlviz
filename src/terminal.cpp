@@ -26,11 +26,11 @@
  * Initializes the terminal with font, layout, and styling parameters.
  */
 yTerminal::yTerminal(
-  TTF_Font * font, size_t line_limit, size_t wrap_width,
+  TTF_Font * font, int font_size, size_t line_limit, size_t wrap_width,
   SDL_Rect area, SDL_Color text_color, SDL_Color bg_color,
   yTerminalAlign align, bool clear_on_new,
   bool append_newline)
-: font_(font), line_limit_(line_limit), wrap_width_(wrap_width),
+: font_(font), font_size_(font_size), line_limit_(line_limit), wrap_width_(wrap_width),
   area_(area), text_color_(text_color), bg_color_(bg_color), align_(align),
   clear_on_new_(clear_on_new), append_newline_(append_newline) {}
 
@@ -103,6 +103,10 @@ void yTerminal::draw(SDL_Renderer * renderer)
     bg_color_.a);
   SDL_RenderFillRect(renderer, &area_);
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+  if (font_) {
+    TTF_SetFontSize(font_, font_size_);
+  }
 
   int y = area_.y + 5;
   const int margin = 5;
@@ -259,4 +263,20 @@ void yTerminal::set_behavior(bool clear_on_new, bool append_newline)
   std::lock_guard<std::mutex> lock(mutex_);
   clear_on_new_ = clear_on_new;
   append_newline_ = append_newline;
+}
+
+void yTerminal::set_font(TTF_Font * font)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (font) {
+    font_ = font;
+  }
+}
+
+void yTerminal::set_font_size(int size)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (size > 0) {
+    font_size_ = size;
+  }
 }

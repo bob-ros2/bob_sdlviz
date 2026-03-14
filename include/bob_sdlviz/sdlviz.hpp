@@ -115,7 +115,7 @@ private:
   SDL_Window * window_ = nullptr;                         ///< Local window handle.
   SDL_Renderer * renderer_ = nullptr;                     ///< SDL renderer handle.
   SDL_Surface * surface_ = nullptr;                       ///< Surface for headless streaming.
-  TTF_Font * font_ = nullptr;                             ///< Default TTF font handle.
+  std::vector<TTF_Font *> fonts_;                         ///< Loaded TTF font handles.
   int screen_width_ = 854;                                ///< Final output width.
   int screen_height_ = 480;                               ///< Final output height.
   bool show_window_ = true;                               ///< Toggle for local UI.

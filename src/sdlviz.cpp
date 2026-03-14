@@ -157,7 +157,7 @@ SdlVizNode::SdlVizNode()
     descriptor);
 
   descriptor.description =
-    "Path to the TTF font file used for text rendering "
+    "Comma or space separated list of paths to TTF font files "
     "(Default: DejaVuSans, Env: SDLVIZ_FONT_PATH).";
   this->declare_parameter(
     "font_path",
@@ -203,13 +203,31 @@ SdlVizNode::SdlVizNode()
     return;
   }
 
-  auto font_path = this->get_parameter("font_path").as_string();
+  auto font_path_list = this->get_parameter("font_path").as_string();
   auto font_size = this->get_parameter("font_size").as_int();
-  font_ = TTF_OpenFont(font_path.c_str(), font_size);
-  if (!font_) {
-    RCLCPP_ERROR(
-      this->get_logger(), "Failed to load font: %s! TTF_Error: %s",
-      font_path.c_str(), TTF_GetError());
+
+  std::stringstream ss(font_path_list);
+  std::string path;
+  while (std::getline(ss, path, ',')) {
+    // Also split by space
+    std::stringstream ss2(path);
+    std::string final_path;
+    while (ss2 >> final_path) {
+      if (final_path.empty()) {continue;}
+      TTF_Font * f = TTF_OpenFont(final_path.c_str(), font_size);
+      if (f) {
+        fonts_.push_back(f);
+        RCLCPP_INFO(this->get_logger(), "Loaded font: %s", final_path.c_str());
+      } else {
+        RCLCPP_ERROR(
+          this->get_logger(), "Failed to load font: %s! TTF_Error: %s",
+          final_path.c_str(), TTF_GetError());
+      }
+    }
+  }
+
+  if (fonts_.empty()) {
+    RCLCPP_ERROR(this->get_logger(), "No valid fonts loaded!");
     return;
   }
 
@@ -327,9 +345,10 @@ SdlVizNode::~SdlVizNode()
   if (surface_) {
     SDL_FreeSurface(surface_);
   }
-  if (font_) {
-    TTF_CloseFont(font_);
+  for (auto f : fonts_) {
+    TTF_CloseFont(f);
   }
+  fonts_.clear();
   TTF_Quit();
   SDL_Quit();
 }
@@ -458,6 +477,9 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
 
         size_t line_limit = config.value("line_limit", 10);
         size_t wrap_width = config.value("wrap_width", 50);
+        int font_size = config.value(
+          "font_size",
+          static_cast<int>(this->get_parameter("font_size").as_int()));
         bool clear_on_new = config.value("clear_on_new", false);
         bool append_newline = config.value("append_newline", false);
 
@@ -472,13 +494,14 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
         auto text_color_json =
           config.value("text_color", json::array({200, 200, 200, 255}));
         SDL_Color text_color = {
-          (Uint8)text_color_json[0], (Uint8)text_color_json[1],
-          (Uint8)text_color_json[2], (Uint8)text_color_json[3]};
+          static_cast<Uint8>(text_color_json[0]), static_cast<Uint8>(text_color_json[1]),
+          static_cast<Uint8>(text_color_json[2]), static_cast<Uint8>(text_color_json[3])};
 
         auto bg_color_json =
           config.value("bg_color", json::array({30, 30, 30, 180}));
-        SDL_Color bg_color = {(Uint8)bg_color_json[0], (Uint8)bg_color_json[1],
-          (Uint8)bg_color_json[2], (Uint8)bg_color_json[3]};
+        SDL_Color bg_color = {static_cast<Uint8>(bg_color_json[0]),
+          static_cast<Uint8>(bg_color_json[1]),
+          static_cast<Uint8>(bg_color_json[2]), static_cast<Uint8>(bg_color_json[3])};
 
         std::lock_guard<std::mutex> lock(terminals_mutex_);
         if (dynamic_terminals_.count(id)) {
@@ -490,6 +513,15 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           dt->terminal->set_wrap_width(wrap_width);
           dt->terminal->set_align(align);
           dt->terminal->set_behavior(clear_on_new, append_newline);
+          dt->terminal->set_font_size(font_size);
+          dt->font_size = font_size;
+
+          int ttf_idx = config.value("ttf", 0);
+          if (ttf_idx >= 0 && static_cast<size_t>(ttf_idx) < fonts_.size()) {
+            dt->ttf_index = ttf_idx;
+            dt->terminal->set_font(fonts_[ttf_idx]);
+          }
+
           dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
           dt->topic = topic;
           dt->title = title;
@@ -503,8 +535,17 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           dt->id = id;
           dt->topic = topic;
           dt->title = title;
+          dt->font_size = font_size;
+          int ttf_idx = config.value("ttf", 0);
+          TTF_Font * selected_font = fonts_.empty() ? nullptr : fonts_[0];
+          if (ttf_idx >= 0 && static_cast<size_t>(ttf_idx) < fonts_.size()) {
+            selected_font = fonts_[ttf_idx];
+            dt->ttf_index = ttf_idx;
+          }
+          if (!selected_font) {continue;}
+
           dt->terminal = std::make_unique<yTerminal>(
-            font_, line_limit, wrap_width, area, text_color, bg_color, align,
+            selected_font, font_size, line_limit, wrap_width, area, text_color, bg_color, align,
             clear_on_new, append_newline);
           dt->creation_time = this->now();
           dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
@@ -766,6 +807,8 @@ void SdlVizNode::publish_current_state()
       item["area"] = json::array(
         {dt->terminal->get_area().x, dt->terminal->get_area().y,
           dt->terminal->get_area().w, dt->terminal->get_area().h});
+      item["ttf"] = dt->ttf_index;
+      item["font_size"] = dt->font_size;
       item["expire"] = dt->lifetime.seconds();
       state.push_back(item);
     }
@@ -848,6 +891,11 @@ void SdlVizNode::render_loop()
   SDL_SetRenderDrawColor(renderer_, 0x1E, 0x1E, 0x1E, 0xFF);
   SDL_RenderClear(renderer_);
 
+  if (fonts_.empty()) {
+    SDL_RenderPresent(renderer_);
+    return;
+  }
+
   {
     std::lock_guard<std::mutex> lock(image_layers_mutex_);
     auto it = dynamic_image_layers_.begin();
@@ -905,8 +953,10 @@ void SdlVizNode::render_loop()
 
               SDL_Rect content_area = dst;
               if (!layer->title.empty()) {
-                draw_title_bar(renderer_, font_, layer->title, dst);
-                int title_h = TTF_FontHeight(font_) + 2;
+                TTF_SetFontSize(
+                  fonts_[0],
+                  static_cast<int>(this->get_parameter("font_size").as_int()));
+                int title_h = TTF_FontHeight(fonts_[0]) + 2;
                 content_area.y += title_h;
                 content_area.h -= title_h;
               }
@@ -940,8 +990,10 @@ void SdlVizNode::render_loop()
 
       SDL_Rect content_area = vs->area;
       if (!vs->title.empty()) {
-        draw_title_bar(renderer_, font_, vs->title, vs->area);
-        int title_h = TTF_FontHeight(font_) + 2;
+        TTF_SetFontSize(
+          fonts_[0],
+          static_cast<int>(this->get_parameter("font_size").as_int()));
+        int title_h = TTF_FontHeight(fonts_[0]) + 2;
         content_area.y += title_h;
         content_area.h -= title_h;
       }
@@ -1000,8 +1052,10 @@ void SdlVizNode::render_loop()
 
           SDL_Rect content_area = layer->area;
           if (!layer->title.empty()) {
-            draw_title_bar(renderer_, font_, layer->title, layer->area);
-            int title_h = TTF_FontHeight(font_) + 2;
+            TTF_SetFontSize(
+              fonts_[0],
+              static_cast<int>(this->get_parameter("font_size").as_int()));
+            int title_h = TTF_FontHeight(fonts_[0]) + 2;
             content_area.y += title_h;
             content_area.h -= title_h;
           }
@@ -1072,8 +1126,14 @@ void SdlVizNode::render_loop()
         expired_terminals.push_back(topic);
       } else {
         if (!dt->title.empty()) {
-          draw_title_bar(renderer_, font_, dt->title, dt->terminal->get_area());
-          int title_h = TTF_FontHeight(font_) + 2;
+          TTF_Font * term_font = fonts_.empty() ? nullptr : fonts_[0];
+          if (dt->ttf_index >= 0 && static_cast<size_t>(dt->ttf_index) < fonts_.size()) {
+            term_font = fonts_[dt->ttf_index];
+          }
+          if (!term_font) {continue;}
+          TTF_SetFontSize(term_font, dt->font_size);
+          draw_title_bar(renderer_, term_font, dt->title, dt->terminal->get_area());
+          int title_h = TTF_FontHeight(term_font) + 2;
           SDL_Rect original_area = dt->terminal->get_area();
           SDL_Rect content_area = original_area;
           content_area.y += title_h;

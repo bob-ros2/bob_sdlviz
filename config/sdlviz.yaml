@@ -19,7 +19,7 @@
     # stream_path: "/tmp/video_pipe" # Filesystem path for the named pipe (FIFO).
 
     # --- Text Terminal Parameters ---
-    font_path: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf" # Path to the .ttf font file.
+    font_path: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf, /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf" # Comma or space separated list of .ttf font files.
     font_size: 16         # Font size for rendering text in dynamic terminals.
 
     # config_file_path: ./config/sdlviz.json
