@@ -467,11 +467,14 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
 
       // Handle Add/Update
       if (type == "String") {
-        if (!config.contains("area")) {
+        std::lock_guard<std::mutex> lock(terminals_mutex_);
+        bool exists = dynamic_terminals_.count(id);
+
+        if (!exists && !config.contains("area")) {
+          RCLCPP_WARN(this->get_logger(), "Skipping new terminal %s: missing 'area'", id.c_str());
           continue;
         }
-        auto area_json = config["area"];
-        SDL_Rect area = {area_json[0], area_json[1], area_json[2], area_json[3]};
+
         std::string title = config.value("title", "");
         std::string static_text = config.value("text", "");
 
@@ -503,34 +506,55 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           static_cast<Uint8>(bg_color_json[1]),
           static_cast<Uint8>(bg_color_json[2]), static_cast<Uint8>(bg_color_json[3])};
 
-        std::lock_guard<std::mutex> lock(terminals_mutex_);
-        if (dynamic_terminals_.count(id)) {
+        if (exists) {
           // Update existing
           auto & dt = dynamic_terminals_[id];
-          dt->terminal->set_area(area);
-          dt->terminal->set_colors(text_color, bg_color);
-          dt->terminal->set_line_limit(line_limit);
-          dt->terminal->set_wrap_width(wrap_width);
-          dt->terminal->set_align(align);
-          dt->terminal->set_behavior(clear_on_new, append_newline);
-          dt->terminal->set_font_size(font_size);
-          dt->font_size = font_size;
 
-          int ttf_idx = config.value("ttf", 0);
-          if (ttf_idx >= 0 && static_cast<size_t>(ttf_idx) < fonts_.size()) {
-            dt->ttf_index = ttf_idx;
-            dt->terminal->set_font(fonts_[ttf_idx]);
+          if (config.contains("area")) {
+            auto area_json = config["area"];
+            SDL_Rect area_val = {area_json[0], area_json[1], area_json[2], area_json[3]};
+            dt->terminal->set_area(area_val);
           }
 
-          dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
-          dt->topic = topic;
-          dt->title = title;
+          if (config.contains("text_color") || config.contains("bg_color")) {
+            dt->terminal->set_colors(text_color, bg_color);
+          }
+
+          if (config.contains("line_limit")) {dt->terminal->set_line_limit(line_limit);}
+          if (config.contains("wrap_width")) {dt->terminal->set_wrap_width(wrap_width);}
+          if (config.contains("align")) {dt->terminal->set_align(align);}
+
+          dt->terminal->set_behavior(clear_on_new, append_newline);
+
+          if (config.contains("font_size")) {
+            dt->terminal->set_font_size(font_size);
+            dt->font_size = font_size;
+          }
+
+          if (config.contains("ttf")) {
+            int ttf_idx = config.value("ttf", 0);
+            if (ttf_idx >= 0 && static_cast<size_t>(ttf_idx) < fonts_.size()) {
+              dt->ttf_index = ttf_idx;
+              dt->terminal->set_font(fonts_[ttf_idx]);
+            }
+          }
+
+          if (config.contains("expire")) {
+            dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
+          }
+
+          if (!topic.empty()) {dt->topic = topic;}
+          if (config.contains("title")) {dt->title = title;}
+
           if (!static_text.empty()) {
             dt->terminal->append(static_text);
           }
           RCLCPP_INFO(this->get_logger(), "Updated terminal: %s", id.c_str());
         } else {
           // Create new
+          auto area_json = config["area"];
+          SDL_Rect area_val = {area_json[0], area_json[1], area_json[2], area_json[3]};
+
           auto dt = std::make_unique<DynamicTerminal>();
           dt->id = id;
           dt->topic = topic;
@@ -545,7 +569,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
           if (!selected_font) {continue;}
 
           dt->terminal = std::make_unique<yTerminal>(
-            selected_font, font_size, line_limit, wrap_width, area, text_color, bg_color, align,
+            selected_font, font_size, line_limit, wrap_width, area_val, text_color, bg_color, align,
             clear_on_new, append_newline);
           dt->creation_time = this->now();
           dt->lifetime = rclcpp::Duration::from_seconds(config.value("expire", 0.0));
