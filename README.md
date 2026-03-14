@@ -305,10 +305,11 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
 
 `bob_sdlviz` implements a robust, non-blocking audio architecture to ensure streams never stall and audio remains synchronized.
 
-### Non-Blocking Audio Bridge
-The `audio_bridge.py` script acts as a persistent master source for FFmpeg. It:
-1. **Silence Injection**: Continuously feeds silent audio frames into a master pipe (`/tmp/audio_master_pipe`).
-2. **Dynamic Mixing**: Listens to the user-facing audio pipe (`/tmp/audio_pipe`) and mixes any incoming audio with the baseline silence.
+### Modern ROS Audio Pipeline
+`bob_sdlviz` works in conjunction with the [**`bob_audio`**](https://github.com/bob-ros2/bob_audio) package. Audio mixing, silence injection, and TTS integration are now handled by a dedicated ROS mixer node.
+
+1. **Silence Injection**: The mixer node ensures a constant stream of audio frames to prevent FFmpeg timeouts.
+2. **Dynamic Mixing**: Multiple audio sources (TTS, Music, System) are mixed into a single master pipe (`/tmp/audio_master_pipe`).
 
 This ensures that FFmpeg always has an active audio stream, even if you stop or start your external audio source.
 
