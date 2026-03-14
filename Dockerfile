@@ -35,9 +35,8 @@ RUN source /opt/ros/humble/setup.bash && \
     colcon build --packages-select bob_sdlviz --symlink-install
 
 # Copy the entrypoint script and make it executable
-COPY ./scripts/audio_bridge.py /usr/local/bin/audio_bridge.py
 COPY ./scripts/start_stream.sh /usr/local/bin/start_stream.sh
-RUN chmod +x /usr/local/bin/start_stream.sh /usr/local/bin/audio_bridge.py
+RUN chmod +x /usr/local/bin/start_stream.sh
 
 # Set the entrypoint for the container
 ENTRYPOINT ["/usr/local/bin/start_stream.sh"]
