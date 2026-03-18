@@ -404,7 +404,7 @@ void SdlVizNode::event_callback(const std_msgs::msg::String::SharedPtr msg)
 /**
  * @brief Parses JSON terminal configuration and spawns/updates layers.
  */
-void SdlVizNode::process_terminal_config(const std::string & json_data)
+bool SdlVizNode::process_terminal_config(const std::string & json_data)
 {
   using json = nlohmann::json;
   try {
@@ -413,7 +413,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
       RCLCPP_WARN(
         this->get_logger(),
         "Received dynamic config that is not an array. Ignoring.");
-      return;
+      return false;
     }
 
     bool changed = false;
@@ -751,9 +751,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
       }
     }
 
-    if (changed) {
-      publish_current_state();
-    }
+    return changed;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(
       this->get_logger(), "Error parsing dynamic config JSON: %s",
@@ -761,6 +759,7 @@ void SdlVizNode::process_terminal_config(const std::string & json_data)
   } catch (...) {
     RCLCPP_ERROR(this->get_logger(), "Unknown error parsing dynamic config JSON.");
   }
+  return false;
 }
 
 /**
@@ -908,8 +907,14 @@ void SdlVizNode::render_loop()
       }
     }
 
+    bool any_changed = false;
     for (const auto & json_data : local_queue) {
-      process_terminal_config(json_data);
+      if (process_terminal_config(json_data)) {
+        any_changed = true;
+      }
+    }
+    if (any_changed) {
+      publish_current_state();
     }
   }
 

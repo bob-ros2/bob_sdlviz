@@ -69,8 +69,9 @@ private:
   /**
    * @brief Parses and applies a terminal configuration JSON.
    * @param json_data The raw JSON string.
+   * @return True if any layer was added, removed, or modified.
    */
-  void process_terminal_config(const std::string & json_data);
+  bool process_terminal_config(const std::string & json_data);
 
   /**
    * @brief Callback for incoming sensor_msgs/Image.
