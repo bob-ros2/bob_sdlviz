@@ -97,7 +97,7 @@ Many parameters can be mapped from environment variables for easier Docker integ
 | `stream_output` | `bool` | Enable writing frames to a FIFO pipe. (Env: `SDLVIZ_STREAM_OUTPUT`) |
 | `stream_path` | `string` | Path to the output FIFO pipe for streaming. (Env: `SDLVIZ_STREAM_PATH`) |
 | `config_file_path`| `string` | Path to a JSON file for initial layout. (Env: `SDLVIZ_CONFIG_PATH`) |
-| `font_path` | `string` | Comma or space separated list of paths to TTF font files. (Env: `SDLVIZ_FONT_PATH`) |
+| `font_path` | `string` | Comma or space separated list of paths to TTF fonts. (Env: `SDLVIZ_FONT_PATH`) |
 | `font_size` | `int` | Base font size for terminals. (Env: `SDLVIZ_FONT_SIZE`) |
 | `fps` | `double` | Target rendering and streaming FPS. (Env: `SDLVIZ_FPS`) |
 
@@ -108,7 +108,7 @@ Many parameters can be mapped from environment variables for easier Docker integ
 - **Dynamic Topics**: Subscribes to topics defined in the JSON configuration (e.g., marker topics or text strings).
 
 #### Published
-- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of **all layers** as a JSON array whenever a change occurs (add, remove, update, or **automatic expiration**). Useful for UI synchronization or external dashboards.
+- `events_changed` (`std_msgs/msg/String`): Reports the current active configuration of **all layers**. This is a **latched** topic that always provides the last known state to new subscribers.
 
 ---
 
@@ -123,6 +123,8 @@ Every layer can have an optional `id` field.
 
 ### Actions
 - **`add` (default)**: Creates a new layer or updates an existing one if the `id` already exists.
+    - **Partial Updates**: If the `id` exists, you only need to provide the fields you want to change (e.g., just `font_size`).
+    - **Mandatory Fields**: `area` and `type` are only mandatory when **creating** a new layer.
 - **`remove`**: Deletes the layer with the specified `id`.
 
 ### Layer Types & Parameters
@@ -296,6 +298,40 @@ For a modern "Browser Source" look with real-time Markdown rendering (ideal for 
   {
     "id": "status_log",
     "action": "remove"
+  }
+]
+```
+
+**Partial Update (Change only Font Size of existing Terminal):**
+```json
+[
+  {
+    "id": "log_terminal",
+    "font_size": 24
+  }
+]
+```
+
+**Complex Layout with Multiple Fonts:**
+```json
+[
+  {
+    "id": "header",
+    "type": "String",
+    "area": [10, 10, 800, 50],
+    "text": "STATUS MONITOR",
+    "ttf": 1,
+    "font_size": 32,
+    "bg_color": [0, 0, 0, 0],
+    "text_color": [0, 255, 0, 255]
+  },
+  {
+    "id": "logs",
+    "type": "String",
+    "area": [10, 70, 400, 300],
+    "topic": "/system/logs",
+    "ttf": 0,
+    "line_limit": 50
   }
 ]
 ```
