@@ -302,7 +302,7 @@ SdlVizNode::SdlVizNode()
   }
 
   events_changed_pub_ = this->create_publisher<std_msgs::msg::String>(
-    "events_changed", 10);
+    "events_changed", rclcpp::QoS(10).transient_local());
 
   auto config_path = this->get_parameter("config_file_path").as_string();
   if (!config_path.empty()) {
@@ -327,6 +327,9 @@ SdlVizNode::SdlVizNode()
     "events", 10,
     std::bind(&SdlVizNode::event_callback, this, std::placeholders::_1),
     sub_options);
+
+  // Publish the initial state (including any layers loaded from config or auto-generated)
+  publish_current_state();
 }
 
 /**
